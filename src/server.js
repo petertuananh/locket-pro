@@ -31,8 +31,8 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(passport.initialize());
 
-// Phục vụ Static Files Frontend
-app.use(express.static(path.join(__dirname, 'public')));
+// Phục vụ Static Files Frontend (tắt index mặc định để ưu tiên routing của Express)
+app.use(express.static(path.join(__dirname, 'public'), { index: false }));
 app.use('/uploads', express.static(config.UPLOADS_DIR));
 
 // API Routes

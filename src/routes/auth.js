@@ -30,8 +30,8 @@ router.get(
   (req, res) => {
     try {
       const token = generateToken(req.user);
-      // Chuyển hướng về trang chủ kèm token
-      res.redirect(`/?token=${token}`);
+      // Chuyển hướng về Web App kèm token
+      res.redirect(`/app?token=${token}`);
     } catch (err) {
       console.error('Lỗi khi phát hành JWT token sau Google login:', err);
       res.redirect('/?error=token_generation_failed');

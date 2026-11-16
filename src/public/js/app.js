@@ -47,7 +47,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   if (!token) {
-    window.location.href = '/';
+    // Nếu chưa có token, chuyển hướng về Landing page (chỉ redirect nếu không đang ở trang chủ)
+    if (window.location.pathname !== '/' && window.location.pathname !== '') {
+      window.location.href = '/';
+    }
     return;
   }
 
