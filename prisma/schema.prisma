@@ -1,0 +1,70 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// 1. Người dùng ứng dụng (Đăng nhập bằng Google)
+model User {
+  id             String          @id @default(uuid())
+  google_id      String          @unique
+  email          String          @unique
+  display_name   String
+  avatar_url     String?
+  role           String          @default("user") // "user" | "admin"
+  created_at     DateTime        @default(now())
+  updated_at     DateTime        @updatedAt
+
+  // Quan hệ: Một user có thể cấu hình nhiều tài khoản Locket
+  locket_accounts LocketAccount[]
+
+  @@map("users")
+}
+
+// 2. Tài khoản Locket Camera được liên kết
+model LocketAccount {
+  id                 String    @id @default(uuid())
+  user_id            String
+  user               User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  
+  label              String    @default("Tài khoản Locket") // Nhãn gợi nhớ (Ví dụ: Locket của tôi, Locket của Em)
+  locket_uid         String    // Firebase UID của tài khoản Locket
+  email              String    // Email tài khoản Locket
+  username           String?   // @username Locket
+  first_name         String?
+  last_name          String?
+  avatar_url         String?   // Ảnh đại diện Locket (Firebase Storage)
+  
+  // Dữ liệu Session mã hóa (idToken, refreshToken, expiresAt, device info)
+  session_data       String    @db.Text
+  
+  // Cấu hình thiết bị giả lập
+  device_model       String    @default("iPhone 15 Pro") // iPhone 13 Pro, 14 Pro, 15 Pro Max...
+  ios_version        String    @default("17.4.1")
+  
+  is_active          Boolean   @default(false) // Đang được chọn làm tài khoản thao tác chính
+  created_at         DateTime  @default(now())
+  updated_at         DateTime  @updatedAt
+
+  @@index([user_id])
+  @@index([locket_uid])
+  @@map("locket_accounts")
+}
+
+// 3. Nhật ký khoảnh khắc & video đã đăng (Tùy chọn cache/lưu vết)
+model PostedMomentLog {
+  id            String    @id @default(uuid())
+  account_id    String
+  moment_uid    String
+  media_type    String    @default("image") // "image" | "video"
+  media_url     String
+  thumbnail_url String?
+  caption       String?
+  is_private    Boolean   @default(false)
+  created_at    DateTime  @default(now())
+
+  @@map("posted_moment_logs")
+}
