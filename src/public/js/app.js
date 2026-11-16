@@ -19,35 +19,16 @@ let socket = null;
 document.addEventListener('DOMContentLoaded', async () => {
   const urlParams = new URLSearchParams(window.location.search);
   const tokenFromUrl = urlParams.get('token');
-  const isDev = urlParams.get('dev') === 'true';
 
   if (tokenFromUrl) {
     localStorage.setItem('locket_jwt_token', tokenFromUrl);
     window.history.replaceState({}, document.title, window.location.pathname);
   }
 
-  let token = localStorage.getItem('locket_jwt_token');
-
-  // Nếu chưa có token mà chọn dev mode thì auto login
-  if (!token && isDev) {
-    try {
-      const res = await fetch('/api/auth/dev-login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: 'demo@tuananh.dev', displayName: 'Peter Tuan Anh' })
-      });
-      const data = await res.json();
-      if (data.success && data.data.token) {
-        token = data.data.token;
-        localStorage.setItem('locket_jwt_token', token);
-      }
-    } catch (err) {
-      console.error('Lỗi khi đăng nhập Dev:', err);
-    }
-  }
+  const token = localStorage.getItem('locket_jwt_token');
 
   if (!token) {
-    // Nếu chưa có token, chuyển hướng về Landing page (chỉ redirect nếu không đang ở trang chủ)
+    // Nếu chưa có token, chuyển hướng về Landing page
     if (window.location.pathname !== '/' && window.location.pathname !== '') {
       window.location.href = '/';
     }
@@ -183,7 +164,7 @@ function renderAccountsModalList() {
   container.innerHTML = allAccounts.map(acc => `
     <div class="p-3.5 rounded-2xl ${acc.is_active ? 'bg-amber-500/10 border-amber-500/40' : 'bg-obsidian-850 border-white/[0.06]'} border flex items-center justify-between gap-3">
       <div class="flex items-center gap-3">
-        <img src="${acc.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'}" class="w-10 h-10 rounded-full object-cover border border-white/10">
+        <img src="${acc.avatar_url || '/images/hero.jpeg'}" class="w-10 h-10 rounded-full object-cover border border-white/10">
         <div>
           <div class="flex items-center gap-2">
             <h4 class="text-xs font-bold text-white">${acc.label}</h4>
@@ -794,7 +775,7 @@ async function loadFriends() {
   container.innerHTML = friends.map(f => `
     <div class="glass-panel p-4 rounded-3xl border border-white/[0.08] hover:border-amber-500/30 transition flex flex-col justify-between">
       <div class="flex items-center gap-3 mb-3">
-        <img src="${f.profile_picture_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'}" class="w-12 h-12 rounded-full object-cover border border-amber-500/30">
+        <img src="${f.profile_picture_url || '/images/hero.jpeg'}" class="w-12 h-12 rounded-full object-cover border border-amber-500/30">
         <div class="truncate">
           <h4 class="text-xs font-bold text-white truncate">${f.first_name ? `${f.first_name} ${f.last_name || ''}` : f.username}</h4>
           <p class="text-[11px] text-amber-400 font-mono truncate">@${f.username || 'user'}</p>
@@ -919,7 +900,7 @@ async function loadConversations() {
     <div onclick="selectConversation('${c.peer_uid || c.id}', '${c.peer_name || 'Bạn bè'}', '${c.peer_avatar || ''}', '${c.peer_username || ''}')" 
          class="p-3 hover:bg-white/[0.04] cursor-pointer flex items-center justify-between gap-3 transition">
       <div class="flex items-center gap-2.5 truncate">
-        <img src="${c.peer_avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'}" class="w-10 h-10 rounded-full object-cover border border-amber-500/20">
+        <img src="${c.peer_avatar || '/images/hero.jpeg'}" class="w-10 h-10 rounded-full object-cover border border-amber-500/20">
         <div class="truncate">
           <h4 class="text-xs font-bold text-white truncate">${c.peer_name || c.peer_username || 'Bạn bè'}</h4>
           <p class="text-[11px] text-gray-400 truncate">${c.last_message || 'Bắt đầu trò chuyện'}</p>

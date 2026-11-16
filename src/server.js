@@ -59,9 +59,8 @@ app.get('/app', (req, res) => {
 });
 
 app.get('/', (req, res) => {
-  // Nếu có query param token hoặc dev=true thì vào app trực tiếp, ngược lại phục vụ trang giới thiệu
-  if (req.query.token || req.query.dev === 'true') {
-    return res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  if (req.query.token) {
+    return res.redirect(`/app?token=${req.query.token}`);
   }
   res.sendFile(path.join(__dirname, 'public', 'landing.html'));
 });
