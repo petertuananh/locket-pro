@@ -13,6 +13,13 @@ src/locket_sessions/
 *.session.json
 uploads/
 
+# SSL & Certificates
+*.pem
+*.crt
+*.key
+cert/
+certs/
+
 # Build & Cache
 dist/
 build/
