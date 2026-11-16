@@ -1,0 +1,176 @@
+/* Locket Pro - Custom Styling & Animations (Locket Amber & Obsidian Theme) */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Pacifico&display=swap');
+
+:root {
+  --locket-gold: #F59E0B;
+  --locket-yellow: #FBBF24;
+  --locket-amber: #D97706;
+  --locket-glow: rgba(245, 158, 11, 0.25);
+  --dark-bg: #090B0E;
+  --card-bg: rgba(20, 24, 33, 0.75);
+  --card-border: rgba(255, 255, 255, 0.08);
+  --card-hover: rgba(245, 158, 11, 0.25);
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  background-color: var(--dark-bg);
+  color: #F3F4F6;
+  overflow-x: hidden;
+}
+
+/* Locket Brand handwritten font */
+.font-brand {
+  font-family: 'Pacifico', cursive;
+}
+
+/* Custom Glassmorphism */
+.glass-panel {
+  background: var(--card-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--card-border);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+.glass-panel-amber {
+  background: rgba(30, 24, 15, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  box-shadow: 0 8px 32px 0 rgba(245, 158, 11, 0.15);
+}
+
+.glass-input {
+  background: rgba(13, 16, 23, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #F9FAFB;
+  transition: all 0.2s ease;
+}
+
+.glass-input:focus {
+  border-color: var(--locket-gold);
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2);
+  outline: none;
+}
+
+/* Floating Golden Particles Canvas */
+#particles-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Locket Button Styles */
+.btn-locket {
+  background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+  color: #090B0E;
+  font-weight: 700;
+  transition: all 0.25s ease;
+  box-shadow: 0 4px 14px 0 rgba(245, 158, 11, 0.35);
+}
+
+.btn-locket:hover {
+  background: linear-gradient(135deg, #FBBF24 0%, #F59E0B 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px 0 rgba(245, 158, 11, 0.45);
+}
+
+.btn-locket-outline {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: #FBBF24;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.btn-locket-outline:hover {
+  background: rgba(245, 158, 11, 0.2);
+  border-color: #FBBF24;
+  color: #FFF;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(15, 18, 25, 0.6);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(245, 158, 11, 0.3);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(245, 158, 11, 0.6);
+}
+
+/* Locket Pill Badge */
+.locket-pill {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  border-radius: 9999px;
+}
+
+/* Pulse animation for active dot */
+@keyframes amberPulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.15);
+  }
+}
+
+.animate-amber-pulse {
+  animation: amberPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Live Preview Phone Frame */
+.phone-mockup {
+  aspect-ratio: 9/16;
+  max-width: 320px;
+  width: 100%;
+  border-radius: 40px;
+  border: 8px solid #20242D;
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.9), 0 0 25px rgba(245, 158, 11, 0.15);
+  position: relative;
+  overflow: hidden;
+  background: #000;
+}
+
+.phone-island {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 86px;
+  height: 24px;
+  background: #000;
+  border-radius: 20px;
+  z-index: 20;
+}
+
+/* Shimmer animation */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton-loading {
+  background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.03) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}

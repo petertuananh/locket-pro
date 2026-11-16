@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="vi" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Locket Pro - Web Client & Quản Lý Đa Tài Khoản</title>
+  <meta name="description" content="Locket Camera Web Client: Đăng nhập Google, 158 Presets Gradient, Nén Video HEVC Apple <6MB, Chat Realtime">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22><text y=%2226%22 font-size=%2226%22>💛</text></svg>">
+  
+  <!-- Tailwind CSS & Lucide Icons -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            locket: {
+              50: '#fffbeb',
+              100: '#fef3c7',
+              200: '#fde68a',
+              300: '#fcd34d',
+              400: '#fbbf24',
+              500: '#f59e0b',
+              600: '#d97706',
+              700: '#b45309',
+              800: '#92400e',
+              900: '#78350f',
+            },
+            obsidian: {
+              950: '#06080B',
+              900: '#090B0E',
+              850: '#0F1219',
+              800: '#141822',
+              750: '#1A1F2C',
+              700: '#222838'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="/css/custom.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body class="bg-obsidian-900 text-gray-100 min-h-screen selection:bg-amber-500 selection:text-black flex flex-col">
+
+  <!-- Floating Particles Canvas -->
+  <script src="/js/particles.js"></script>
+
+  <!-- Top Notification Toast Container -->
+  <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- Header -->
+  <header class="sticky top-0 z-40 glass-panel border-b border-white/[0.08] backdrop-blur-xl">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-col md:flex-row items-center justify-between gap-4">
+      
+      <!-- Brand & Slogan -->
+      <div class="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-2xl bg-gradient-to-tr from-amber-500 to-yellow-400 flex items-center justify-center shadow-lg shadow-amber-500/30">
+            <span class="text-lg">💛</span>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-brand text-2xl text-amber-400 tracking-wide">Locket Pro</span>
+              <span class="text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">LOCKET SDK</span>
+            </div>
+            <p class="text-[10px] text-gray-400 italic">"Bảng tin, khoảnh khắc, kết nối bạn bè & chat Locket trực tuyến..."</p>
+          </div>
+        </div>
+
+        <!-- Mobile User Avatar Toggle -->
+        <div class="flex md:hidden items-center gap-2">
+          <button onclick="openAccountModal()" class="w-8 h-8 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-xs font-bold text-amber-300">
+            <span id="mobile-user-initials">TA</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="flex items-center gap-1.5 p-1 rounded-2xl bg-obsidian-850/80 border border-white/[0.06] overflow-x-auto max-w-full">
+        <button onclick="switchTab('feed')" id="tab-btn-feed" class="nav-tab px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap bg-amber-500 text-black shadow-lg shadow-amber-500/20">
+          <i data-lucide="newspaper" class="w-4 h-4"></i>
+          <span>Bảng tin (Feed)</span>
+        </button>
+
+        <button onclick="switchTab('post')" id="tab-btn-post" class="nav-tab px-3.5 py-2 rounded-xl text-xs font-semibold text-gray-300 hover:text-white hover:bg-white/[0.05] transition flex items-center gap-1.5 whitespace-nowrap">
+          <i data-lucide="sparkles" class="w-4 h-4 text-amber-400"></i>
+          <span>Đăng khoảnh khắc (158 Presets)</span>
+        </button>
+
+        <button onclick="switchTab('friends')" id="tab-btn-friends" class="nav-tab px-3.5 py-2 rounded-xl text-xs font-semibold text-gray-300 hover:text-white hover:bg-white/[0.05] transition flex items-center gap-1.5 whitespace-nowrap">
+          <i data-lucide="users" class="w-4 h-4 text-amber-400"></i>
+          <span>Bạn bè & Kết nối</span>
+        </button>
+
+        <button onclick="switchTab('chat')" id="tab-btn-chat" class="nav-tab px-3.5 py-2 rounded-xl text-xs font-semibold text-gray-300 hover:text-white hover:bg-white/[0.05] transition flex items-center gap-1.5 whitespace-nowrap">
+          <i data-lucide="message-circle" class="w-4 h-4 text-amber-400"></i>
+          <span>Trò chuyện Locket</span>
+        </button>
+
+        <button onclick="switchTab('profile')" id="tab-btn-profile" class="nav-tab px-3.5 py-2 rounded-xl text-xs font-semibold text-gray-300 hover:text-white hover:bg-white/[0.05] transition flex items-center gap-1.5 whitespace-nowrap">
+          <i data-lucide="sliders" class="w-4 h-4 text-amber-400"></i>
+          <span>Hồ sơ & Thiết bị</span>
+        </button>
+      </nav>
+
+      <!-- Right Header Actions (Account Switcher & Add Account) -->
+      <div class="hidden md:flex items-center gap-2.5">
+        <!-- Active Account Badge -->
+        <div onclick="openAccountModal()" class="cursor-pointer px-3 py-1.5 rounded-2xl bg-obsidian-800/90 border border-white/[0.08] hover:border-amber-500/40 transition flex items-center gap-2">
+          <img id="header-account-avatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" alt="Avatar" class="w-7 h-7 rounded-full object-cover border border-amber-500/30">
+          <div class="text-left">
+            <p id="header-account-name" class="text-xs font-bold text-gray-200 leading-tight">Peter Tuan Anh</p>
+            <p id="header-account-username" class="text-[10px] text-gray-400 leading-tight">@phantrantuananh</p>
+          </div>
+          <span class="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-semibold border border-amber-500/30">Hoạt động</span>
+        </div>
+
+        <!-- Switch Account Button -->
+        <button onclick="openAccountModal()" class="px-3 py-2 rounded-xl text-xs font-semibold text-gray-300 bg-obsidian-800 border border-white/[0.08] hover:border-amber-500/40 hover:text-amber-300 transition flex items-center gap-1.5">
+          <i data-lucide="users" class="w-3.5 h-3.5"></i>
+          <span>Đổi / Quản lý tài khoản</span>
+        </button>
+
+        <!-- Add Account Button -->
+        <button onclick="openAddAccountModal()" class="btn-locket px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1">
+          <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+          <span>Thêm tài khoản</span>
+        </button>
+
+        <!-- User Logout Menu -->
+        <button onclick="logout()" title="Đăng xuất" class="p-2 rounded-xl bg-obsidian-800 border border-white/[0.08] hover:border-rose-500/40 hover:text-rose-400 text-gray-400 transition">
+          <i data-lucide="log-out" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 z-10">
+    
+    <!-- ================= TAB 1: BẢNG TIN (FEED) ================= -->
+    <section id="section-feed" class="tab-section space-y-6">
+      
+      <!-- Feed Filter Sub-Tabs -->
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center gap-2 p-1 rounded-2xl bg-obsidian-850 border border-white/[0.06]">
+          <button onclick="changeFeedFilter('recent')" id="feed-sub-recent" class="px-4 py-2 rounded-xl text-xs font-bold bg-amber-500 text-black shadow-md transition flex items-center gap-1.5">
+            <i data-lucide="users" class="w-3.5 h-3.5"></i>
+            <span>Bạn bè đăng gần đây</span>
+          </button>
+          <button onclick="changeFeedFilter('my')" id="feed-sub-my" class="px-4 py-2 rounded-xl text-xs font-semibold text-gray-300 hover:text-white hover:bg-white/[0.05] transition flex items-center gap-1.5">
+            <i data-lucide="user" class="w-3.5 h-3.5 text-amber-400"></i>
+            <span>Khoảnh khắc của tui</span>
+          </button>
+          <button onclick="changeFeedFilter('rollcall')" id="feed-sub-rollcall" class="px-4 py-2 rounded-xl text-xs font-semibold text-gray-300 hover:text-white hover:bg-white/[0.05] transition flex items-center gap-1.5">
+            <i data-lucide="calendar" class="w-3.5 h-3.5 text-amber-400"></i>
+            <span>Rollcall tuần này</span>
+          </button>
+        </div>
+
+        <button onclick="loadFeed()" class="px-4 py-2 rounded-xl text-xs font-semibold text-gray-300 bg-obsidian-800 border border-white/[0.08] hover:border-amber-500/40 hover:text-amber-300 transition flex items-center gap-2">
+          <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
+          <span>Làm mới</span>
+        </button>
+      </div>
+
+      <!-- Feed Moments Container -->
+      <div id="feed-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Feed moments will be injected dynamically -->
+        <div class="col-span-full py-16 text-center text-gray-500 flex flex-col items-center justify-center gap-3">
+          <div class="w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+          <p class="text-sm">Đang tải bảng tin khoảnh khắc Locket...</p>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ================= TAB 2: ĐĂNG KHOẢNH KHẮC (158 PRESETS) ================= -->
+    <section id="section-post" class="tab-section hidden space-y-8">
+      
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        
+        <!-- Left: Upload & Presets Configuration (7 cols) -->
+        <div class="lg:col-span-7 space-y-6">
+          
+          <!-- Step 1: Media Selection -->
+          <div class="glass-panel p-6 rounded-3xl space-y-4">
+            <div class="flex items-center justify-between">
+              <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                <i data-lucide="image" class="w-4 h-4 text-amber-400"></i>
+                <span>1. Chọn ảnh hoặc video</span>
+              </h3>
+              
+              <!-- Toggle File / Webcam -->
+              <div class="flex items-center gap-1 p-1 rounded-xl bg-obsidian-900 border border-white/[0.08]">
+                <button onclick="setUploadMode('file')" id="upload-mode-file" class="px-3 py-1 rounded-lg text-xs font-bold bg-amber-500 text-black transition">Tải file</button>
+                <button onclick="setUploadMode('webcam')" id="upload-mode-webcam" class="px-3 py-1 rounded-lg text-xs font-medium text-gray-400 hover:text-white transition">Chụp Webcam</button>
+              </div>
+            </div>
+
+            <!-- File Upload Drag & Drop Zone -->
+            <div id="file-upload-zone" onclick="document.getElementById('post-file-input').click()" 
+                 class="border-2 border-dashed border-white/10 hover:border-amber-500/50 rounded-2xl p-8 text-center cursor-pointer transition bg-obsidian-900/60 group">
+              <input type="file" id="post-file-input" accept="image/*,video/mp4,video/quicktime" class="hidden" onchange="handleFileSelected(this.files)">
+              
+              <div class="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition">
+                <i data-lucide="upload-cloud" class="w-6 h-6"></i>
+              </div>
+              <p class="text-sm font-semibold text-gray-200">Kéo thả ảnh/video vào đây hoặc nhấn để chọn</p>
+              <p class="text-xs text-gray-500 mt-1">Hỗ trợ JPG, PNG, WEBP, MP4, MOV (Tối đa 100MB)</p>
+              <p id="selected-file-label" class="text-xs text-amber-400 mt-3 font-mono font-medium hidden"></p>
+            </div>
+
+            <!-- Webcam Viewfinder (Hidden by default) -->
+            <div id="webcam-zone" class="hidden space-y-3">
+              <div class="relative aspect-square max-w-sm mx-auto rounded-2xl overflow-hidden bg-black border border-white/10">
+                <video id="webcam-video" autoplay playsinline class="w-full h-full object-cover"></video>
+                <canvas id="webcam-canvas" class="hidden"></canvas>
+                <button onclick="captureWebcam()" class="absolute bottom-4 left-1/2 -translate-x-1/2 px-6 py-2.5 rounded-full btn-locket text-xs font-bold flex items-center gap-2 shadow-2xl">
+                  <i data-lucide="camera" class="w-4 h-4"></i>
+                  <span>Chụp Ngay</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 2: Preset Selection & Custom Gradient -->
+          <div class="glass-panel p-6 rounded-3xl space-y-5">
+            <div class="flex items-center justify-between">
+              <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                <i data-lucide="sparkles" class="w-4 h-4 text-amber-400"></i>
+                <span>2. Mẫu Caption & Gradient Pill (158 presets)</span>
+              </h3>
+
+              <label class="flex items-center gap-2 cursor-pointer text-xs text-gray-400 hover:text-white">
+                <input type="checkbox" id="custom-gradient-toggle" onchange="toggleCustomGradient(this.checked)" class="rounded border-gray-600 text-amber-500 focus:ring-amber-400">
+                <span>Tự tạo Gradient</span>
+              </label>
+            </div>
+
+            <!-- Caption Text Input -->
+            <div>
+              <input type="text" id="post-caption-input" oninput="updateLivePreview()" placeholder="Nhập thêm chữ nếu thích (hoặc để trống dùng chữ của preset)..." 
+                     class="w-full glass-input rounded-xl px-4 py-2.5 text-xs text-gray-200 placeholder-gray-500">
+            </div>
+
+            <!-- Custom Gradient Builder (Hidden by default) -->
+            <div id="custom-gradient-box" class="hidden p-4 rounded-2xl bg-obsidian-900/90 border border-amber-500/30 space-y-3">
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div>
+                  <label class="text-[10px] text-gray-400 block mb-1">Màu Gradient 1</label>
+                  <input type="color" id="custom-color-1" value="#FF416C" onchange="updateLivePreview()" class="w-full h-8 rounded-lg bg-transparent cursor-pointer">
+                </div>
+                <div>
+                  <label class="text-[10px] text-gray-400 block mb-1">Màu Gradient 2</label>
+                  <input type="color" id="custom-color-2" value="#8A2387" onchange="updateLivePreview()" class="w-full h-8 rounded-lg bg-transparent cursor-pointer">
+                </div>
+                <div>
+                  <label class="text-[10px] text-gray-400 block mb-1">Màu chữ</label>
+                  <input type="color" id="custom-text-color" value="#FFFFFF" onchange="updateLivePreview()" class="w-full h-8 rounded-lg bg-transparent cursor-pointer">
+                </div>
+                <div>
+                  <label class="text-[10px] text-gray-400 block mb-1">Emoji Icon</label>
+                  <input type="text" id="custom-emoji" value="🚀" maxlength="2" oninput="updateLivePreview()" class="w-full glass-input rounded-lg px-2 py-1 text-center text-sm">
+                </div>
+              </div>
+            </div>
+
+            <!-- Presets Search & Category Filters -->
+            <div class="space-y-3">
+              <div class="relative">
+                <i data-lucide="search" class="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2"></i>
+                <input type="text" id="preset-search-input" oninput="filterPresets()" placeholder="Tìm kiếm mẫu preset..." 
+                       class="w-full glass-input rounded-xl pl-9 pr-4 py-2 text-xs placeholder-gray-500">
+              </div>
+
+              <!-- Categories Filter Buttons -->
+              <div id="presets-categories" class="flex items-center gap-1.5 overflow-x-auto pb-1 max-w-full">
+                <button onclick="selectCategory('all')" class="cat-btn px-3 py-1 rounded-full text-[11px] font-bold bg-amber-500 text-black whitespace-nowrap">Tất cả (158)</button>
+              </div>
+            </div>
+
+            <!-- Presets Grid Container -->
+            <div id="presets-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-72 overflow-y-auto pr-1">
+              <!-- Preset buttons rendered dynamically -->
+            </div>
+          </div>
+
+          <!-- Step 3: Audience Selector -->
+          <div class="glass-panel p-6 rounded-3xl space-y-3">
+            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              <i data-lucide="send" class="w-4 h-4 text-amber-400"></i>
+              <span>3. Đối tượng nhận</span>
+            </h3>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+              <label class="cursor-pointer glass-panel p-3 rounded-2xl flex items-center gap-2 hover:border-amber-500/40">
+                <input type="radio" name="audience" value="all" checked class="text-amber-500 focus:ring-amber-400">
+                <span class="font-semibold text-gray-200">Tất cả bạn bè Locket</span>
+              </label>
+
+              <label class="cursor-pointer glass-panel p-3 rounded-2xl flex items-center gap-2 hover:border-amber-500/40">
+                <input type="radio" name="audience" value="self" class="text-amber-500 focus:ring-amber-400">
+                <span class="font-semibold text-gray-200">Chỉ mình tui (Riêng tư)</span>
+              </label>
+
+              <label class="cursor-pointer glass-panel p-3 rounded-2xl flex items-center gap-2 hover:border-amber-500/40">
+                <input type="radio" name="audience" value="select" class="text-amber-500 focus:ring-amber-400">
+                <span class="font-semibold text-gray-200">Chọn bạn bè cụ thể</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Submit Post Button -->
+          <button onclick="submitMomentPost()" id="btn-submit-post" class="w-full py-4 rounded-2xl btn-locket text-sm font-bold flex items-center justify-center gap-2">
+            <i data-lucide="rocket" class="w-5 h-5"></i>
+            <span>ĐĂNG KHOẢNH KHẮC LÊN LOCKET NGAY</span>
+          </button>
+
+        </div>
+
+        <!-- Right: Live Preview Phone Frame (5 cols) -->
+        <div class="lg:col-span-5 flex flex-col items-center justify-center sticky top-28">
+          <div class="text-center mb-4">
+            <p class="text-xs uppercase font-bold tracking-widest text-amber-400">XEM TRƯỚC (LIVE PREVIEW)</p>
+          </div>
+
+          <!-- Realistic Phone Mockup -->
+          <div class="phone-mockup relative mx-auto bg-black flex flex-col justify-between p-3">
+            <div class="phone-island"></div>
+
+            <!-- Top Phone Header -->
+            <div class="pt-7 px-3 flex items-center justify-between text-xs text-white z-10">
+              <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-full bg-amber-500/30 border border-amber-400/50 flex items-center justify-center text-xs font-bold">
+                  TA
+                </div>
+                <div>
+                  <p class="font-bold text-[11px] leading-none" id="preview-user-name">Peter Tuan Anh</p>
+                  <p class="text-[9px] text-gray-400" id="preview-user-handle">@phantrantuananh</p>
+                </div>
+              </div>
+              <div class="text-[10px] text-amber-400 font-mono">Vừa xong</div>
+            </div>
+
+            <!-- Center Viewport (Image or Video) -->
+            <div class="relative my-auto aspect-square w-full rounded-3xl overflow-hidden bg-obsidian-800 border border-white/10 flex items-center justify-center">
+              <img id="live-preview-img" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=600&auto=format&fit=crop&q=80" alt="Live Preview" class="w-full h-full object-cover">
+              <video id="live-preview-video" autoplay loop muted playsinline class="w-full h-full object-cover hidden"></video>
+
+              <!-- Dynamic Gradient Pill Overlay -->
+              <div id="live-preview-pill" class="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full text-xs font-bold text-white shadow-xl flex items-center gap-1.5 whitespace-nowrap transition-all duration-200"
+                   style="background: #000; color: #FFF;">
+                <span id="preview-pill-icon"></span>
+                <span id="preview-pill-text">standard</span>
+              </div>
+            </div>
+
+            <!-- Bottom Mock Bar -->
+            <div class="pb-3 px-3 flex items-center justify-around text-base text-gray-400 z-10">
+              <span>❤️</span>
+              <span>🔥</span>
+              <span>😍</span>
+              <span>🥰</span>
+              <span>😂</span>
+            </div>
+          </div>
+
+          <p class="text-xs text-gray-500 mt-4 text-center max-w-xs italic">
+            "Hình ảnh và gradient pill sẽ hiển thị y hệt thế này trên Locket của đối phương!"
+          </p>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- ================= TAB 3: BẠN BÈ & KẾT NỐI ================= -->
+    <section id="section-friends" class="tab-section hidden space-y-6">
+      
+      <!-- Add Friend Bar -->
+      <div class="glass-panel p-4 rounded-3xl flex flex-col sm:flex-row items-center gap-3">
+        <div class="relative flex-1 w-full">
+          <i data-lucide="user-plus" class="w-4 h-4 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2"></i>
+          <input type="text" id="add-friend-input" placeholder="Nhập Username Locket hoặc dán link locket.cam/username..." 
+                 class="w-full glass-input rounded-2xl pl-11 pr-4 py-3 text-xs placeholder-gray-500">
+        </div>
+        <button onclick="sendFriendRequest()" class="btn-locket px-6 py-3 rounded-2xl text-xs font-bold flex items-center gap-2 whitespace-nowrap w-full sm:w-auto justify-center">
+          <i data-lucide="send" class="w-3.5 h-3.5"></i>
+          <span>Kết bạn</span>
+        </button>
+      </div>
+
+      <!-- Friend Sub-tabs -->
+      <div class="flex items-center gap-3 border-b border-white/[0.08] pb-3 text-xs font-bold text-gray-400">
+        <button onclick="switchFriendSubtab('list')" id="friends-subtab-list" class="text-amber-400 border-b-2 border-amber-400 pb-2 flex items-center gap-1.5">
+          <i data-lucide="users" class="w-3.5 h-3.5"></i>
+          <span>DANH SÁCH BẠN BÈ TRÊN LOCKET (<span id="friends-count">0</span>)</span>
+        </button>
+        <button onclick="switchFriendSubtab('requests')" id="friends-subtab-requests" class="hover:text-white pb-2 flex items-center gap-1.5">
+          <i data-lucide="inbox" class="w-3.5 h-3.5"></i>
+          <span>Lời mời kết bạn (<span id="requests-count">0</span>)</span>
+        </button>
+      </div>
+
+      <!-- Friends Grid List -->
+      <div id="friends-grid-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <!-- Friends cards rendered dynamically -->
+      </div>
+
+      <!-- Requests Container (Hidden by default) -->
+      <div id="requests-grid-container" class="hidden space-y-4">
+        <!-- Incoming & Outgoing friend requests rendered dynamically -->
+      </div>
+
+    </section>
+
+    <!-- ================= TAB 4: TRÒ CHUYỆN LOCKET ================= -->
+    <section id="section-chat" class="tab-section hidden">
+      
+      <div class="glass-panel rounded-3xl overflow-hidden grid grid-cols-1 md:grid-cols-12 min-h-[640px] border border-white/[0.08]">
+        
+        <!-- Left: Conversations List (4 cols) -->
+        <div class="md:col-span-4 border-r border-white/[0.08] flex flex-col bg-obsidian-850/60">
+          <div class="p-4 border-b border-white/[0.08] flex items-center justify-between">
+            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              <i data-lucide="message-square" class="w-4 h-4 text-amber-400"></i>
+              <span>Tin nhắn Locket</span>
+            </h3>
+            <button onclick="loadConversations()" class="text-gray-400 hover:text-white">
+              <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+
+          <div class="p-3 border-b border-white/[0.06]">
+            <input type="text" id="chat-search" oninput="filterConversations()" placeholder="Tìm kiếm bạn bè..." 
+                   class="w-full glass-input rounded-xl px-3 py-1.5 text-xs placeholder-gray-500">
+          </div>
+
+          <!-- Conversations scroll list -->
+          <div id="conversations-list" class="flex-1 overflow-y-auto divide-y divide-white/[0.04]">
+            <!-- Injected dynamically -->
+          </div>
+        </div>
+
+        <!-- Right: Active Chat Area (8 cols) -->
+        <div class="md:col-span-8 flex flex-col bg-obsidian-900/80">
+          
+          <!-- Peer Header -->
+          <div id="chat-peer-header" class="p-4 border-b border-white/[0.08] flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <img id="chat-peer-avatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" alt="Peer" class="w-9 h-9 rounded-full object-cover border border-amber-500/30">
+              <div>
+                <h4 id="chat-peer-name" class="text-sm font-bold text-white">Chọn một cuộc trò chuyện</h4>
+                <p id="chat-peer-username" class="text-xs text-gray-400">@username</p>
+              </div>
+            </div>
+            <button onclick="refreshCurrentChat()" class="text-gray-400 hover:text-white">
+              <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+            </button>
+          </div>
+
+          <!-- Chat Messages Scroll Container -->
+          <div id="chat-messages-container" class="flex-1 p-4 overflow-y-auto space-y-3 flex flex-col">
+            <div class="m-auto text-center text-gray-500 text-xs">
+              <i data-lucide="messages-square" class="w-10 h-10 mx-auto mb-2 text-gray-600"></i>
+              <p>Chọn một người bạn ở danh sách bên trái để bắt đầu trò chuyện trực tiếp</p>
+            </div>
+          </div>
+
+          <!-- Message Input Bar -->
+          <div class="p-3 border-t border-white/[0.08] flex items-center gap-2 bg-obsidian-850/80">
+            <input type="text" id="chat-input" onkeypress="if(event.key === 'Enter') sendChatMessage()" placeholder="Nhập tin nhắn..." 
+                   class="flex-1 glass-input rounded-2xl px-4 py-2.5 text-xs text-gray-200 placeholder-gray-500">
+            
+            <button onclick="sendChatMessage()" class="w-10 h-10 rounded-full btn-locket flex items-center justify-center text-black shadow-lg">
+              <i data-lucide="send" class="w-4 h-4"></i>
+            </button>
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- ================= TAB 5: HỒ SƠ & THIẾT BỊ ================= -->
+    <section id="section-profile" class="tab-section hidden space-y-6">
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        <!-- Left: Locket Account Info -->
+        <div class="glass-panel p-6 rounded-3xl space-y-6">
+          <h3 class="text-sm font-bold text-white flex items-center gap-2">
+            <i data-lucide="user-check" class="w-4 h-4 text-amber-400"></i>
+            <span>Thông tin tài khoản Locket</span>
+          </h3>
+
+          <div class="flex items-center gap-4">
+            <div class="relative group">
+              <img id="profile-avatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80" alt="Avatar" class="w-20 h-20 rounded-full object-cover border-2 border-amber-500/40">
+              <label for="profile-avatar-input" class="absolute inset-0 rounded-full bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer transition">
+                <i data-lucide="camera" class="w-5 h-5 text-amber-400"></i>
+              </label>
+              <input type="file" id="profile-avatar-input" accept="image/*" class="hidden" onchange="uploadNewAvatar(this.files)">
+            </div>
+
+            <div>
+              <h4 id="profile-display-name" class="text-base font-bold text-white">Peter Tuan Anh</h4>
+              <p id="profile-username" class="text-xs text-amber-400 font-mono">@phantrantuananh</p>
+              <p id="profile-email" class="text-xs text-gray-400">petertuananh@hotmail.com</p>
+              <p id="profile-uid" class="text-[10px] text-gray-500 font-mono mt-1">UID: ...</p>
+            </div>
+          </div>
+
+          <!-- Edit Name -->
+          <div class="space-y-3 pt-2">
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="text-[11px] text-gray-400 block mb-1">Họ (Last Name):</label>
+                <input type="text" id="profile-input-lastname" class="w-full glass-input rounded-xl px-3 py-2 text-xs">
+              </div>
+              <div>
+                <label class="text-[11px] text-gray-400 block mb-1">Tên (First Name):</label>
+                <input type="text" id="profile-input-firstname" class="w-full glass-input rounded-xl px-3 py-2 text-xs">
+              </div>
+            </div>
+            <button onclick="updateProfileName()" class="px-4 py-2 rounded-xl text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition">
+              Lưu tên mới
+            </button>
+          </div>
+
+          <!-- Edit Birthdate -->
+          <div class="space-y-2 pt-2 border-t border-white/[0.06]">
+            <label class="text-[11px] text-gray-400 block">Ngày sinh (YYYY-MM-DD):</label>
+            <div class="flex items-center gap-2">
+              <input type="date" id="profile-input-birthdate" class="glass-input rounded-xl px-3 py-2 text-xs text-gray-200">
+              <button onclick="updateProfileBirthdate()" class="px-4 py-2 rounded-xl text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition">
+                Lưu ngày sinh
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Hardware Emulation -->
+        <div class="glass-panel p-6 rounded-3xl space-y-6">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              <i data-lucide="apple" class="w-4 h-4 text-amber-400"></i>
+              <span>Giả lập phần cứng iOS</span>
+            </h3>
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">100% Authentic</span>
+          </div>
+
+          <p class="text-xs text-gray-400 leading-relaxed">
+            Locket.js SDK tự động mô phỏng 100% định danh phần cứng iPhone chuẩn xác (bundle ID, Google Protobuf flags, Firebase token) để đảm bảo không bị chặn hay hạn chế tính năng.
+          </p>
+
+          <div class="space-y-3">
+            <div>
+              <label class="text-[11px] text-gray-400 block mb-1">Dòng iPhone giả lập:</label>
+              <select id="device-select-model" class="w-full glass-input rounded-xl px-3 py-2 text-xs text-gray-200">
+                <option value="iPhone 15 Pro">iPhone 15 Pro (Khuyến nghị)</option>
+                <option value="iPhone 15 Pro Max">iPhone 15 Pro Max</option>
+                <option value="iPhone 14 Pro">iPhone 14 Pro</option>
+                <option value="iPhone 14 Pro Max">iPhone 14 Pro Max</option>
+                <option value="iPhone 13 Pro">iPhone 13 Pro</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="text-[11px] text-gray-400 block mb-1">Phiên bản iOS:</label>
+              <input type="text" id="device-input-ios" value="18.1.0" class="w-full glass-input rounded-xl px-3 py-2 text-xs text-gray-200">
+            </div>
+
+            <button onclick="saveDeviceConfig()" class="w-full py-2.5 rounded-xl text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition">
+              Áp dụng phần cứng giả lập
+            </button>
+          </div>
+
+          <div class="pt-4 border-t border-white/[0.06]">
+            <button onclick="syncClientData()" class="w-full py-3 rounded-2xl bg-obsidian-800 border border-white/10 hover:border-amber-400 text-xs font-bold text-gray-200 hover:text-white transition flex items-center justify-center gap-2">
+              <i data-lucide="refresh-cw" class="w-4 h-4 text-amber-400"></i>
+              <span>Đồng bộ Client Data & Push Notification</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ================= MODALS ================= -->
+
+  <!-- 1. Account Switcher Modal -->
+  <div id="modal-accounts" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden items-center justify-center p-4">
+    <div class="glass-panel w-full max-w-lg rounded-3xl p-6 space-y-5 border border-white/10">
+      <div class="flex items-center justify-between">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i data-lucide="users" class="w-4 h-4 text-amber-400"></i>
+          <span>Quản lý Đa tài khoản Locket</span>
+        </h3>
+        <button onclick="closeAccountModal()" class="text-gray-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div id="modal-accounts-list" class="space-y-2.5 max-h-72 overflow-y-auto">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <div class="pt-2 flex items-center justify-end gap-3">
+        <button onclick="closeAccountModal(); openAddAccountModal();" class="btn-locket px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5">
+          <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+          <span>Thêm tài khoản mới</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Add Locket Account Modal -->
+  <div id="modal-add-account" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden items-center justify-center p-4">
+    <div class="glass-panel w-full max-w-md rounded-3xl p-6 space-y-4 border border-white/10">
+      <div class="flex items-center justify-between">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i data-lucide="user-plus" class="w-4 h-4 text-amber-400"></i>
+          <span>Liên kết tài khoản Locket</span>
+        </h3>
+        <button onclick="closeAddAccountModal()" class="text-gray-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <p class="text-xs text-gray-400">
+        Nhập thông tin đăng nhập Locket của bạn. Hệ thống sẽ xác thực an toàn qua Firebase Identity Toolkit của Locket.
+      </p>
+
+      <div class="space-y-3">
+        <div>
+          <label class="text-[11px] text-gray-400 block mb-1">Tên gợi nhớ (Label):</label>
+          <input type="text" id="add-acc-label" value="Locket của tôi" class="w-full glass-input rounded-xl px-3 py-2 text-xs">
+        </div>
+        <div>
+          <label class="text-[11px] text-gray-400 block mb-1">Email Locket:</label>
+          <input type="email" id="add-acc-email" placeholder="example@gmail.com" class="w-full glass-input rounded-xl px-3 py-2 text-xs">
+        </div>
+        <div>
+          <label class="text-[11px] text-gray-400 block mb-1">Mật khẩu Locket:</label>
+          <input type="password" id="add-acc-password" placeholder="••••••••" class="w-full glass-input rounded-xl px-3 py-2 text-xs">
+        </div>
+        <div>
+          <label class="text-[11px] text-gray-400 block mb-1">Thiết bị giả lập:</label>
+          <select id="add-acc-device" class="w-full glass-input rounded-xl px-3 py-2 text-xs text-gray-200">
+            <option value="iPhone 15 Pro">iPhone 15 Pro</option>
+            <option value="iPhone 15 Pro Max">iPhone 15 Pro Max</option>
+            <option value="iPhone 14 Pro">iPhone 14 Pro</option>
+            <option value="iPhone 13 Pro">iPhone 13 Pro</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="pt-2 flex items-center justify-end gap-2">
+        <button onclick="closeAddAccountModal()" class="px-4 py-2 rounded-xl text-xs text-gray-400 hover:text-white">Hủy</button>
+        <button onclick="submitAddAccount()" id="btn-submit-add-acc" class="btn-locket px-5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2">
+          <span>Đăng nhập & Liên kết</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Moment Viewers & Reactions Modal -->
+  <div id="modal-viewers" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden items-center justify-center p-4">
+    <div class="glass-panel w-full max-w-md rounded-3xl p-6 space-y-4 border border-white/10">
+      <div class="flex items-center justify-between">
+        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+          <i data-lucide="eye" class="w-4 h-4 text-amber-400"></i>
+          <span>Lượt xem & Cảm xúc</span>
+        </h3>
+        <button onclick="closeViewersModal()" class="text-gray-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div id="modal-viewers-content" class="space-y-3 max-h-64 overflow-y-auto divide-y divide-white/[0.06]">
+        <!-- Injected dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Main JavaScript Logic -->
+  <script src="/js/app.js"></script>
+</body>
+</html>
