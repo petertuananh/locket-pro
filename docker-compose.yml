@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: locket-web-app
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_URL=postgresql://locket_user:locket_secret_pass@db:5432/locket_db?schema=public
+      - JWT_SECRET=locket_pro_ultra_secure_jwt_secret_token_2026
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+      - GOOGLE_CALLBACK_URL=https://locket.tuananh.dev/api/auth/google/callback
+      - CLIENT_URL=https://locket.tuananh.dev
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - locket_sessions_data:/app/src/locket_sessions
+      - locket_uploads_data:/app/uploads
+
+  db:
+    image: postgres:16-alpine
+    container_name: locket-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=locket_user
+      - POSTGRES_PASSWORD=locket_secret_pass
+      - POSTGRES_DB=locket_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U locket_user -d locket_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  locket_sessions_data:
+  locket_uploads_data:
