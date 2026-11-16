@@ -1,0 +1,29 @@
+# Logs & Temp
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Environment & Sessions
+.env
+.env.local
+.env.production
+src/locket_sessions/
+*.session.json
+uploads/
+
+# Build & Cache
+dist/
+build/
+.cache/
+.DS_Store
+*.log
+
+# Prisma
+prisma/dev.db
+prisma/dev.db-journal
+
+# Keep gitignore and package
+!package.json
+!package-lock.json

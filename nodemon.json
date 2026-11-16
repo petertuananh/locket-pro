@@ -1,0 +1,5 @@
+{
+  "watch": ["src"],
+  "ext": "js,mjs,cjs,html,css",
+  "ignore": ["src/locket_sessions/**", "uploads/**", "*.json"]
+}
