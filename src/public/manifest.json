@@ -1,0 +1,25 @@
+{
+  "name": "Locket Pro - Locket Web Client",
+  "short_name": "Locket Pro",
+  "description": "Nền tảng Locket Camera Web Client độc lập: Đăng ảnh, Video HEVC chuẩn Apple, 158 Presets Gradient & Chat Realtime",
+  "start_url": "/app",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#090B0E",
+  "theme_color": "#090B0E",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/images/locket.webp",
+      "sizes": "192x192",
+      "type": "image/webp",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/images/locket.webp",
+      "sizes": "512x512",
+      "type": "image/webp",
+      "purpose": "any maskable"
+    }
+  ]
+}

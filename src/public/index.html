@@ -2,10 +2,23 @@
 <html lang="vi" class="dark">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Locket Pro - Web Client & Quản Lý Đa Tài Khoản</title>
   <meta name="description" content="Locket Camera Web Client: Đăng nhập Google, 158 Presets Gradient, Nén Video HEVC Apple <6MB, Chat Realtime">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22><text y=%2226%22 font-size=%2226%22>💛</text></svg>">
+  <link rel="icon" type="image/webp" href="/images/locket.webp">
+
+  <!-- Apple iOS Safari & PWA Meta Tags -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Locket Pro">
+  <link rel="apple-touch-icon" href="/images/locket.webp">
+  <link rel="apple-touch-icon" sizes="152x152" href="/images/locket.webp">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/locket.webp">
+  <link rel="apple-touch-icon" sizes="167x167" href="/images/locket.webp">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#090B0E">
+  <meta name="application-name" content="Locket Pro">
+  <link rel="manifest" href="/manifest.json">
   
   <!-- Tailwind CSS & Lucide Icons -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -54,85 +67,65 @@
 
   <!-- Header -->
   <header class="sticky top-0 z-40 glass-panel border-b border-white/[0.08] backdrop-blur-xl">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-col md:flex-row items-center justify-between gap-4">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3">
       
-      <!-- Brand & Slogan -->
-      <div class="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
-        <div class="flex items-center gap-2.5">
-          <div class="w-9 h-9 rounded-2xl bg-gradient-to-tr from-amber-500 to-yellow-400 flex items-center justify-center shadow-lg shadow-amber-500/30">
-            <span class="text-lg">💛</span>
-          </div>
-          <div>
-            <div class="flex items-center gap-2">
-              <span class="font-brand text-2xl text-amber-400 tracking-wide">Locket Pro</span>
-              <span class="text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">LOCKET SDK</span>
-            </div>
-            <p class="text-[10px] text-gray-400 italic">"Bảng tin, khoảnh khắc, kết nối bạn bè & chat Locket trực tuyến..."</p>
-          </div>
+      <!-- Brand Logo -->
+      <a href="/app" class="flex items-center gap-2.5 group shrink-0">
+        <img src="/images/locket.webp" alt="Locket Pro" class="w-9 h-9 rounded-2xl shadow-md shadow-amber-500/25 ring-1 ring-amber-500/30 group-hover:scale-105 transition-transform duration-200 object-cover">
+        <div class="flex items-center gap-1.5">
+          <span class="font-brand text-2xl text-amber-400 tracking-wide leading-none">Locket Pro</span>
+          <span class="hidden sm:inline-block text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30">Web</span>
         </div>
+      </a>
 
-        <!-- Mobile User Avatar Toggle -->
-        <div class="flex md:hidden items-center gap-2">
-          <button onclick="openAccountModal()" class="w-8 h-8 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-xs font-bold text-amber-300">
-            <span id="mobile-user-initials">TA</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Navigation Tabs -->
-      <nav class="flex items-center gap-1.5 p-1 rounded-2xl bg-obsidian-850/80 border border-white/[0.06] overflow-x-auto max-w-full">
-        <button onclick="switchTab('feed')" id="tab-btn-feed" class="nav-tab px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap bg-amber-500 text-black shadow-lg shadow-amber-500/20">
+      <!-- Navigation Tabs (Desktop) -->
+      <nav class="hidden md:flex items-center gap-1 p-1 rounded-2xl bg-obsidian-850/90 border border-white/[0.06]">
+        <button onclick="switchTab('feed')" id="tab-btn-feed" class="nav-tab px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap bg-amber-500 text-black shadow-lg shadow-amber-500/20">
           <i data-lucide="newspaper" class="w-4 h-4"></i>
-          <span>Bảng tin (Feed)</span>
+          <span>Bảng tin</span>
         </button>
 
-        <button onclick="switchTab('post')" id="tab-btn-post" class="nav-tab px-3.5 py-2 rounded-xl text-xs font-semibold text-gray-300 hover:text-white hover:bg-white/[0.05] transition flex items-center gap-1.5 whitespace-nowrap">
+        <button onclick="switchTab('post')" id="tab-btn-post" class="nav-tab px-3.5 py-1.5 rounded-xl text-xs font-semibold text-gray-300 hover:text-white hover:bg-white/[0.05] transition flex items-center gap-1.5 whitespace-nowrap">
           <i data-lucide="sparkles" class="w-4 h-4 text-amber-400"></i>
-          <span>Đăng khoảnh khắc (158 Presets)</span>
+          <span>Đăng khoảnh khắc</span>
         </button>
 
-        <button onclick="switchTab('friends')" id="tab-btn-friends" class="nav-tab px-3.5 py-2 rounded-xl text-xs font-semibold text-gray-300 hover:text-white hover:bg-white/[0.05] transition flex items-center gap-1.5 whitespace-nowrap">
+        <button onclick="switchTab('friends')" id="tab-btn-friends" class="nav-tab px-3.5 py-1.5 rounded-xl text-xs font-semibold text-gray-300 hover:text-white hover:bg-white/[0.05] transition flex items-center gap-1.5 whitespace-nowrap">
           <i data-lucide="users" class="w-4 h-4 text-amber-400"></i>
-          <span>Bạn bè & Kết nối</span>
+          <span>Bạn bè</span>
         </button>
 
-        <button onclick="switchTab('chat')" id="tab-btn-chat" class="nav-tab px-3.5 py-2 rounded-xl text-xs font-semibold text-gray-300 hover:text-white hover:bg-white/[0.05] transition flex items-center gap-1.5 whitespace-nowrap">
+        <button onclick="switchTab('chat')" id="tab-btn-chat" class="nav-tab px-3.5 py-1.5 rounded-xl text-xs font-semibold text-gray-300 hover:text-white hover:bg-white/[0.05] transition flex items-center gap-1.5 whitespace-nowrap">
           <i data-lucide="message-circle" class="w-4 h-4 text-amber-400"></i>
-          <span>Trò chuyện Locket</span>
+          <span>Trò chuyện</span>
         </button>
 
-        <button onclick="switchTab('profile')" id="tab-btn-profile" class="nav-tab px-3.5 py-2 rounded-xl text-xs font-semibold text-gray-300 hover:text-white hover:bg-white/[0.05] transition flex items-center gap-1.5 whitespace-nowrap">
+        <button onclick="switchTab('profile')" id="tab-btn-profile" class="nav-tab px-3.5 py-1.5 rounded-xl text-xs font-semibold text-gray-300 hover:text-white hover:bg-white/[0.05] transition flex items-center gap-1.5 whitespace-nowrap">
           <i data-lucide="sliders" class="w-4 h-4 text-amber-400"></i>
-          <span>Hồ sơ & Thiết bị</span>
+          <span>Cài đặt</span>
         </button>
       </nav>
 
       <!-- Right Header Actions (Account Switcher & Add Account) -->
-      <div class="hidden md:flex items-center gap-2.5">
-        <!-- Active Account Badge -->
-        <div onclick="openAccountModal()" class="cursor-pointer px-3 py-1.5 rounded-2xl bg-obsidian-800/90 border border-white/[0.08] hover:border-amber-500/40 transition flex items-center gap-2">
-          <img id="header-account-avatar" src="/images/hero.jpeg" alt="Avatar" class="w-7 h-7 rounded-full object-cover border border-amber-500/30">
-          <div class="text-left">
-            <p id="header-account-name" class="text-xs font-bold text-gray-200 leading-tight">Peter Tuan Anh</p>
-            <p id="header-account-username" class="text-[10px] text-gray-400 leading-tight">@phantrantuananh</p>
+      <div class="flex items-center gap-2 shrink-0">
+        <!-- Active Account Badge (Click to open switcher/modal) -->
+        <div onclick="openAccountModal()" class="cursor-pointer px-2.5 py-1.5 rounded-2xl bg-obsidian-800/90 border border-white/[0.08] hover:border-amber-500/40 hover:bg-obsidian-750 transition flex items-center gap-2 group">
+          <img id="header-account-avatar" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f59e0b' stroke-width='1.5'%3E%3Cpath d='M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2'%3E%3C/path%3E%3Ccircle cx='12' cy='7' r='4'%3E%3C/circle%3E%3C/svg%3E" alt="Avatar" class="w-7 h-7 rounded-full object-cover ring-1 ring-amber-500/40 bg-white/5">
+          <div class="text-left hidden sm:block">
+            <p id="header-account-name" class="text-xs font-bold text-gray-200 group-hover:text-white leading-tight truncate max-w-[120px]">Chưa kết nối Locket</p>
+            <p id="header-account-username" class="text-[10px] text-gray-400 leading-tight truncate max-w-[120px]">Nhấn để thêm nick</p>
           </div>
-          <span class="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-semibold border border-amber-500/30">Hoạt động</span>
+          <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-gray-400 group-hover:text-amber-400 transition hidden sm:block"></i>
         </div>
 
-        <!-- Switch Account Button -->
-        <button onclick="openAccountModal()" class="px-3 py-2 rounded-xl text-xs font-semibold text-gray-300 bg-obsidian-800 border border-white/[0.08] hover:border-amber-500/40 hover:text-amber-300 transition flex items-center gap-1.5">
-          <i data-lucide="users" class="w-3.5 h-3.5"></i>
-          <span>Đổi / Quản lý tài khoản</span>
-        </button>
-
         <!-- Add Account Button -->
-        <button onclick="openAddAccountModal()" class="btn-locket px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1">
+        <button onclick="openAddAccountModal()" title="Thêm tài khoản Locket" class="hidden sm:flex items-center gap-1.5 btn-locket px-3 py-1.5 rounded-xl text-xs font-bold transition">
           <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-          <span>Thêm tài khoản</span>
+          <span>Thêm nick</span>
         </button>
 
         <!-- User Logout Menu -->
-        <button onclick="logout()" title="Đăng xuất" class="p-2 rounded-xl bg-obsidian-800 border border-white/[0.08] hover:border-rose-500/40 hover:text-rose-400 text-gray-400 transition">
+        <button onclick="logout()" title="Đăng xuất" class="p-2 rounded-xl bg-obsidian-800/90 border border-white/[0.08] hover:border-rose-500/40 hover:text-rose-400 text-gray-400 transition">
           <i data-lucide="log-out" class="w-4 h-4"></i>
         </button>
       </div>
@@ -141,7 +134,7 @@
   </header>
 
   <!-- Main Container -->
-  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 z-10">
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 md:pb-8 z-10">
     
     <!-- ================= TAB 1: BẢNG TIN (FEED) ================= -->
     <section id="section-feed" class="tab-section space-y-6">
@@ -219,12 +212,17 @@
             <!-- Webcam Viewfinder (Hidden by default) -->
             <div id="webcam-zone" class="hidden space-y-3">
               <div class="relative aspect-square max-w-sm mx-auto rounded-2xl overflow-hidden bg-black border border-white/10">
-                <video id="webcam-video" autoplay playsinline class="w-full h-full object-cover"></video>
+                <video id="webcam-video" autoplay playsinline class="w-full h-full object-cover transition-transform duration-300"></video>
                 <canvas id="webcam-canvas" class="hidden"></canvas>
-                <button onclick="captureWebcam()" class="absolute bottom-4 left-1/2 -translate-x-1/2 px-6 py-2.5 rounded-full btn-locket text-xs font-bold flex items-center gap-2 shadow-2xl">
-                  <i data-lucide="camera" class="w-4 h-4"></i>
-                  <span>Chụp Ngay</span>
-                </button>
+                <div class="absolute bottom-4 left-0 right-0 flex items-center justify-center gap-3 z-10 px-4">
+                  <button type="button" onclick="flipWebcam()" title="Đổi camera Trước / Sau" class="w-10 h-10 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-white hover:text-amber-400 hover:border-amber-400/50 flex items-center justify-center transition active:scale-95 shadow-lg">
+                    <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                  </button>
+                  <button type="button" onclick="captureWebcamSnapshot()" class="px-6 py-2.5 rounded-full btn-locket text-xs font-bold flex items-center gap-2 shadow-2xl">
+                    <i data-lucide="camera" class="w-4 h-4"></i>
+                    <span>Chụp Ngay</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -244,9 +242,29 @@
             </div>
 
             <!-- Caption Text Input -->
-            <div>
+            <div class="space-y-2">
               <input type="text" id="post-caption-input" oninput="updateLivePreview()" placeholder="Nhập thêm chữ nếu thích (hoặc để trống dùng chữ của preset)..." 
                      class="w-full glass-input rounded-xl px-4 py-2.5 text-xs text-gray-200 placeholder-gray-500">
+
+              <!-- Dynamic Preset Tools (Browser Time & GPS Location) -->
+              <div id="dynamic-preset-tools" class="flex flex-wrap items-center gap-2 pt-1 text-xs">
+                <button type="button" onclick="getBrowserGPSLocation()" class="px-3 py-1.5 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/30 font-medium flex items-center gap-1.5 transition">
+                  <i data-lucide="map-pin" class="w-3.5 h-3.5"></i>
+                  <span id="gps-status-text">Lấy vị trí GPS</span>
+                </button>
+                <button type="button" onclick="refreshBrowserTime()" class="px-3 py-1.5 rounded-xl bg-blue-500/20 text-blue-300 border border-blue-500/30 hover:bg-blue-500/30 font-medium flex items-center gap-1.5 transition">
+                  <i data-lucide="clock" class="w-3.5 h-3.5"></i>
+                  <span>Lấy giờ hiện tại</span>
+                </button>
+                <div class="flex items-center gap-1 text-[11px] text-gray-400 overflow-x-auto py-1 max-w-full">
+                  <span class="text-gray-500 whitespace-nowrap">Gợi ý nhanh:</span>
+                  <button type="button" onclick="setQuickLocation('Hà Nội')" class="px-2 py-0.5 rounded-lg bg-obsidian-800 border border-white/10 hover:border-amber-400/50 hover:text-white transition whitespace-nowrap">Hà Nội</button>
+                  <button type="button" onclick="setQuickLocation('TP. Hồ Chí Minh')" class="px-2 py-0.5 rounded-lg bg-obsidian-800 border border-white/10 hover:border-amber-400/50 hover:text-white transition whitespace-nowrap">TP. HCM</button>
+                  <button type="button" onclick="setQuickLocation('Đà Nẵng')" class="px-2 py-0.5 rounded-lg bg-obsidian-800 border border-white/10 hover:border-amber-400/50 hover:text-white transition whitespace-nowrap">Đà Nẵng</button>
+                  <button type="button" onclick="setQuickLocation('Biên Hòa, Đồng Nai')" class="px-2 py-0.5 rounded-lg bg-obsidian-800 border border-white/10 hover:border-amber-400/50 hover:text-white transition whitespace-nowrap">Biên Hòa</button>
+                  <button type="button" onclick="setQuickLocation('Đà Lạt')" class="px-2 py-0.5 rounded-lg bg-obsidian-800 border border-white/10 hover:border-amber-400/50 hover:text-white transition whitespace-nowrap">Đà Lạt</button>
+                </div>
+              </div>
             </div>
 
             <!-- Custom Gradient Builder (Hidden by default) -->
@@ -300,19 +318,35 @@
 
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
               <label class="cursor-pointer glass-panel p-3 rounded-2xl flex items-center gap-2 hover:border-amber-500/40">
-                <input type="radio" name="audience" value="all" checked class="text-amber-500 focus:ring-amber-400">
+                <input type="radio" name="audience" value="all" checked onchange="handleAudienceChange(this.value)" class="text-amber-500 focus:ring-amber-400">
                 <span class="font-semibold text-gray-200">Tất cả bạn bè Locket</span>
               </label>
 
               <label class="cursor-pointer glass-panel p-3 rounded-2xl flex items-center gap-2 hover:border-amber-500/40">
-                <input type="radio" name="audience" value="self" class="text-amber-500 focus:ring-amber-400">
+                <input type="radio" name="audience" value="self" onchange="handleAudienceChange(this.value)" class="text-amber-500 focus:ring-amber-400">
                 <span class="font-semibold text-gray-200">Chỉ mình tui (Riêng tư)</span>
               </label>
 
               <label class="cursor-pointer glass-panel p-3 rounded-2xl flex items-center gap-2 hover:border-amber-500/40">
-                <input type="radio" name="audience" value="select" class="text-amber-500 focus:ring-amber-400">
+                <input type="radio" name="audience" value="select" onchange="handleAudienceChange(this.value)" class="text-amber-500 focus:ring-amber-400">
                 <span class="font-semibold text-gray-200">Chọn bạn bè cụ thể</span>
               </label>
+            </div>
+
+            <!-- Friend Selector Container (Visible when audience === 'select') -->
+            <div id="friends-selector-box" class="hidden mt-3 p-4 rounded-2xl bg-obsidian-850/90 border border-white/[0.08] space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-amber-400 flex items-center gap-1.5">
+                  <i data-lucide="check-square" class="w-3.5 h-3.5"></i>
+                  <span>Chọn bạn bè nhận (<span id="selected-friends-count">0</span> đã chọn):</span>
+                </span>
+                <button type="button" onclick="toggleSelectAllFriends()" id="btn-toggle-all-friends" class="text-[11px] text-gray-400 hover:text-amber-300 underline font-medium">
+                  Chọn tất cả
+                </button>
+              </div>
+              <div id="post-friends-list" class="max-h-52 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-2 pr-1">
+                <div class="text-xs text-gray-500 py-3 text-center col-span-full">Đang tải danh sách bạn bè...</div>
+              </div>
             </div>
           </div>
 
@@ -337,12 +371,10 @@
             <!-- Top Phone Header -->
             <div class="pt-7 px-3 flex items-center justify-between text-xs text-white z-10">
               <div class="flex items-center gap-2">
-                <div class="w-7 h-7 rounded-full bg-amber-500/30 border border-amber-400/50 flex items-center justify-center text-xs font-bold">
-                  TA
-                </div>
+                <img id="preview-user-avatar" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f59e0b' stroke-width='1.5'%3E%3Cpath d='M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2'%3E%3C/path%3E%3Ccircle cx='12' cy='7' r='4'%3E%3C/circle%3E%3C/svg%3E" alt="Avatar" class="w-7 h-7 rounded-full object-cover ring-1 ring-amber-400/40 bg-white/5">
                 <div>
-                  <p class="font-bold text-[11px] leading-none" id="preview-user-name">Peter Tuan Anh</p>
-                  <p class="text-[9px] text-gray-400" id="preview-user-handle">@phantrantuananh</p>
+                  <p class="font-bold text-[11px] leading-none" id="preview-user-name">Chưa kết nối Locket</p>
+                  <p class="text-[9px] text-gray-400" id="preview-user-handle">@chuacolocket</p>
                 </div>
               </div>
               <div class="text-[10px] text-amber-400 font-mono">Vừa xong</div>
@@ -353,8 +385,16 @@
               <img id="live-preview-img" src="/images/hero.jpeg" alt="Live Preview" class="w-full h-full object-cover">
               <video id="live-preview-video" autoplay loop muted playsinline class="w-full h-full object-cover hidden"></video>
 
+              <!-- Default Media Hint Overlay (Không che mặt người trong ảnh mẫu) -->
+              <div id="live-preview-default-overlay" class="absolute bottom-14 left-4 right-4 z-10 px-3 py-2 rounded-2xl bg-black/60 backdrop-blur-md border border-white/20 text-white text-center shadow-lg pointer-events-none transition-all duration-300">
+                <p class="text-xs font-semibold text-amber-300 flex items-center justify-center gap-1.5">
+                  <span>✨</span>
+                  <span>Hãy tải lên khoảnh khắc của chính bạn</span>
+                </p>
+              </div>
+
               <!-- Dynamic Gradient Pill Overlay -->
-              <div id="live-preview-pill" class="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full text-xs font-bold text-white shadow-xl flex items-center gap-1.5 whitespace-nowrap transition-all duration-200"
+              <div id="live-preview-pill" class="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full text-xs font-bold text-white shadow-xl flex items-center gap-1.5 whitespace-nowrap transition-all duration-200 z-10"
                    style="background: #000; color: #FFF;">
                 <span id="preview-pill-icon"></span>
                 <span id="preview-pill-text">standard</span>
@@ -454,7 +494,7 @@
           <!-- Peer Header -->
           <div id="chat-peer-header" class="p-4 border-b border-white/[0.08] flex items-center justify-between">
             <div class="flex items-center gap-3">
-              <img id="chat-peer-avatar" src="/images/hero.jpeg" alt="Peer" class="w-9 h-9 rounded-full object-cover border border-amber-500/30">
+              <img id="chat-peer-avatar" src="/images/locket.webp" alt="Peer" class="w-9 h-9 rounded-full object-cover border border-amber-500/30">
               <div>
                 <h4 id="chat-peer-name" class="text-sm font-bold text-white">Chọn một cuộc trò chuyện</h4>
                 <p id="chat-peer-username" class="text-xs text-gray-400">@username</p>
@@ -496,14 +536,33 @@
         
         <!-- Left: Locket Account Info -->
         <div class="glass-panel p-6 rounded-3xl space-y-6">
-          <h3 class="text-sm font-bold text-white flex items-center gap-2">
-            <i data-lucide="user-check" class="w-4 h-4 text-amber-400"></i>
-            <span>Thông tin tài khoản Locket</span>
-          </h3>
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              <i data-lucide="user-check" class="w-4 h-4 text-amber-400"></i>
+              <span>Thông tin tài khoản Locket</span>
+            </h3>
+            <button onclick="openAddAccountModal()" class="btn-locket px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5">
+              <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+              <span>Thêm nick Locket</span>
+            </button>
+          </div>
+
+          <!-- Notice banner if no Locket account is linked -->
+          <div id="no-account-banner" class="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-start justify-between gap-3">
+            <div class="space-y-1">
+              <p class="text-xs font-bold text-amber-300 flex items-center gap-1.5">
+                <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-400"></i>
+                <span>Chưa liên kết tài khoản Locket</span>
+              </p>
+              <p class="text-[11px] text-gray-400 leading-relaxed">
+                Bạn cần đăng nhập tài khoản Locket để xem Bảng tin, Đăng ảnh/video, Xem danh sách bạn bè và Nhắn tin trực tiếp.
+              </p>
+            </div>
+          </div>
 
           <div class="flex items-center gap-4">
             <div class="relative group">
-              <img id="profile-avatar" src="/images/hero.jpeg" alt="Avatar" class="w-20 h-20 rounded-full object-cover border-2 border-amber-500/40">
+              <img id="profile-avatar" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f59e0b' stroke-width='1.5'%3E%3Cpath d='M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2'%3E%3C/path%3E%3Ccircle cx='12' cy='7' r='4'%3E%3C/circle%3E%3C/svg%3E" alt="Avatar" class="w-20 h-20 rounded-full object-cover border-2 border-amber-500/40 bg-white/5">
               <label for="profile-avatar-input" class="absolute inset-0 rounded-full bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer transition">
                 <i data-lucide="camera" class="w-5 h-5 text-amber-400"></i>
               </label>
@@ -511,10 +570,10 @@
             </div>
 
             <div>
-              <h4 id="profile-display-name" class="text-base font-bold text-white">Peter Tuan Anh</h4>
-              <p id="profile-username" class="text-xs text-amber-400 font-mono">@phantrantuananh</p>
-              <p id="profile-email" class="text-xs text-gray-400">petertuananh@hotmail.com</p>
-              <p id="profile-uid" class="text-[10px] text-gray-500 font-mono mt-1">UID: ...</p>
+              <h4 id="profile-display-name" class="text-base font-bold text-white">Chưa liên kết Locket</h4>
+              <p id="profile-username" class="text-xs text-amber-400 font-mono">Chưa có tài khoản</p>
+              <p id="profile-email" class="text-xs text-gray-400">Vui lòng thêm tài khoản Locket</p>
+              <p id="profile-uid" class="text-[10px] text-gray-500 font-mono mt-1">UID: ---</p>
             </div>
           </div>
 
@@ -693,6 +752,30 @@
       </div>
     </div>
   </div>
+
+  <!-- Mobile Bottom Navigation Bar (iOS / App Style) -->
+  <nav class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-obsidian-950/95 backdrop-blur-xl border-t border-white/[0.08] px-2 py-2 flex items-center justify-around">
+    <button onclick="switchTab('feed')" class="mobile-nav-tab flex flex-col items-center gap-1 py-1 px-3 rounded-xl text-[10px] font-semibold text-amber-400 transition" data-tab="feed">
+      <i data-lucide="newspaper" class="w-5 h-5"></i>
+      <span>Bảng tin</span>
+    </button>
+    <button onclick="switchTab('post')" class="mobile-nav-tab flex flex-col items-center gap-1 py-1 px-3 rounded-xl text-[10px] font-semibold text-gray-400 hover:text-white transition" data-tab="post">
+      <i data-lucide="sparkles" class="w-5 h-5"></i>
+      <span>Đăng ảnh</span>
+    </button>
+    <button onclick="switchTab('friends')" class="mobile-nav-tab flex flex-col items-center gap-1 py-1 px-3 rounded-xl text-[10px] font-semibold text-gray-400 hover:text-white transition" data-tab="friends">
+      <i data-lucide="users" class="w-5 h-5"></i>
+      <span>Bạn bè</span>
+    </button>
+    <button onclick="switchTab('chat')" class="mobile-nav-tab flex flex-col items-center gap-1 py-1 px-3 rounded-xl text-[10px] font-semibold text-gray-400 hover:text-white transition" data-tab="chat">
+      <i data-lucide="message-circle" class="w-5 h-5"></i>
+      <span>Chat</span>
+    </button>
+    <button onclick="switchTab('profile')" class="mobile-nav-tab flex flex-col items-center gap-1 py-1 px-3 rounded-xl text-[10px] font-semibold text-gray-400 hover:text-white transition" data-tab="profile">
+      <i data-lucide="sliders" class="w-5 h-5"></i>
+      <span>Cài đặt</span>
+    </button>
+  </nav>
 
   <!-- Main JavaScript Logic -->
   <script src="/js/app.js"></script>

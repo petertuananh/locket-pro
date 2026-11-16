@@ -14,6 +14,45 @@ let webcamStream = null;
 let activePeerUid = null;
 let activePeerDetails = null;
 let socket = null;
+let currentFacingMode = 'user';
+let cachedAudienceFriends = [];
+
+const DEFAULT_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f59e0b' stroke-width='1.5'%3E%3Cpath d='M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2'%3E%3C/path%3E%3Ccircle cx='12' cy='7' r='4'%3E%3C/circle%3E%3C/svg%3E";
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/[&<>"']/g, m => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+  })[m]);
+}
+
+function updateLocketTabsVisibility(hasAccount) {
+  const locketTabIds = ['feed', 'post', 'friends', 'chat'];
+
+  locketTabIds.forEach(tabId => {
+    const desktopBtn = document.getElementById(`tab-btn-${tabId}`);
+    if (desktopBtn) {
+      if (hasAccount) desktopBtn.classList.remove('hidden');
+      else desktopBtn.classList.add('hidden');
+    }
+
+    const mobileBtn = document.querySelector(`.mobile-nav-tab[data-tab="${tabId}"]`);
+    if (mobileBtn) {
+      if (hasAccount) mobileBtn.classList.remove('hidden');
+      else mobileBtn.classList.add('hidden');
+    }
+  });
+
+  const banner = document.getElementById('no-account-banner');
+  if (banner) {
+    if (hasAccount) banner.classList.add('hidden');
+    else banner.classList.remove('hidden');
+  }
+
+  if (!hasAccount) {
+    switchTab('profile');
+  }
+}
 
 // ================= 1. AUTHENTICATION & INITIALIZATION =================
 document.addEventListener('DOMContentLoaded', async () => {
@@ -50,7 +89,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Tải thông tin người dùng & tài khoản
   await checkAuthAndLoadUser();
   await loadPresets();
-  await loadFeed();
+  if (activeLocketAccount) {
+    await loadFeed();
+  }
   lucide.createIcons();
 });
 
@@ -117,35 +158,58 @@ async function loadActiveAccount() {
     activeLocketAccount = res.data.account;
     const profile = res.data.locketProfile || {};
 
+    const fullName = (activeLocketAccount.first_name ? `${activeLocketAccount.first_name} ${activeLocketAccount.last_name || ''}`.trim() : activeLocketAccount.label) || 'Locket Account';
+    const usernameDisplay = activeLocketAccount.username ? `@${activeLocketAccount.username}` : activeLocketAccount.email;
+    const avatar = activeLocketAccount.avatar_url || DEFAULT_AVATAR;
+
     // Cập nhật Header
-    document.getElementById('header-account-name').textContent = 
-      (activeLocketAccount.first_name ? `${activeLocketAccount.first_name} ${activeLocketAccount.last_name || ''}` : activeLocketAccount.label) || 'Locket Account';
-    document.getElementById('header-account-username').textContent = 
-      activeLocketAccount.username ? `@${activeLocketAccount.username}` : activeLocketAccount.email;
-    
-    if (activeLocketAccount.avatar_url) {
-      document.getElementById('header-account-avatar').src = activeLocketAccount.avatar_url;
-      document.getElementById('profile-avatar').src = activeLocketAccount.avatar_url;
-    }
+    document.getElementById('header-account-name').textContent = fullName;
+    document.getElementById('header-account-username').textContent = usernameDisplay;
+    document.getElementById('header-account-avatar').src = avatar;
 
     // Cập nhật Preview & Profile Tab
-    document.getElementById('preview-user-name').textContent = document.getElementById('header-account-name').textContent;
-    document.getElementById('preview-user-handle').textContent = document.getElementById('header-account-username').textContent;
-    document.getElementById('profile-display-name').textContent = document.getElementById('header-account-name').textContent;
-    document.getElementById('profile-username').textContent = document.getElementById('header-account-username').textContent;
+    document.getElementById('preview-user-name').textContent = fullName;
+    document.getElementById('preview-user-handle').textContent = usernameDisplay;
+    const prevAvatar = document.getElementById('preview-user-avatar');
+    if (prevAvatar) prevAvatar.src = avatar;
+
+    document.getElementById('profile-display-name').textContent = fullName;
+    document.getElementById('profile-username').textContent = usernameDisplay;
     document.getElementById('profile-email').textContent = activeLocketAccount.email;
-    document.getElementById('profile-uid').textContent = `UID: ${activeLocketAccount.id}`;
-    
+    document.getElementById('profile-uid').textContent = `UID: ${activeLocketAccount.locket_uid || activeLocketAccount.id}`;
+    document.getElementById('profile-avatar').src = avatar;
+
     document.getElementById('profile-input-firstname').value = activeLocketAccount.first_name || '';
     document.getElementById('profile-input-lastname').value = activeLocketAccount.last_name || '';
     
     if (profile.birthdate) {
       document.getElementById('profile-input-birthdate').value = profile.birthdate;
     }
+
+    updateLocketTabsVisibility(true);
   } else {
     // Nếu chưa có tài khoản nào
+    activeLocketAccount = null;
     document.getElementById('header-account-name').textContent = 'Chưa liên kết Locket';
-    document.getElementById('header-account-username').textContent = 'Nhấn để thêm tài khoản';
+    document.getElementById('header-account-username').textContent = 'Nhấn để thêm nick';
+    document.getElementById('header-account-avatar').src = DEFAULT_AVATAR;
+
+    document.getElementById('preview-user-name').textContent = 'Chưa có tài khoản';
+    document.getElementById('preview-user-handle').textContent = '@chuacolocket';
+    const prevAvatar = document.getElementById('preview-user-avatar');
+    if (prevAvatar) prevAvatar.src = DEFAULT_AVATAR;
+
+    document.getElementById('profile-display-name').textContent = 'Chưa liên kết Locket';
+    document.getElementById('profile-username').textContent = 'Chưa có tài khoản';
+    document.getElementById('profile-email').textContent = 'Vui lòng thêm tài khoản Locket';
+    document.getElementById('profile-uid').textContent = 'UID: ---';
+    document.getElementById('profile-avatar').src = DEFAULT_AVATAR;
+
+    document.getElementById('profile-input-firstname').value = '';
+    document.getElementById('profile-input-lastname').value = '';
+    document.getElementById('profile-input-birthdate').value = '';
+
+    updateLocketTabsVisibility(false);
   }
 }
 
@@ -164,7 +228,7 @@ function renderAccountsModalList() {
   container.innerHTML = allAccounts.map(acc => `
     <div class="p-3.5 rounded-2xl ${acc.is_active ? 'bg-amber-500/10 border-amber-500/40' : 'bg-obsidian-850 border-white/[0.06]'} border flex items-center justify-between gap-3">
       <div class="flex items-center gap-3">
-        <img src="${acc.avatar_url || '/images/hero.jpeg'}" class="w-10 h-10 rounded-full object-cover border border-white/10">
+        <img src="${acc.avatar_url || DEFAULT_AVATAR}" class="w-10 h-10 rounded-full object-cover border border-white/10">
         <div>
           <div class="flex items-center gap-2">
             <h4 class="text-xs font-bold text-white">${acc.label}</h4>
@@ -197,7 +261,9 @@ async function switchAccount(accountId) {
     closeAccountModal();
     await loadAccounts();
     await loadActiveAccount();
+    if (activeLocketAccount) {
     await loadFeed();
+  }
   } else {
     showToast(res ? res.msg : 'Không thể chuyển tài khoản', 'error');
   }
@@ -230,7 +296,9 @@ async function submitAddAccount() {
       closeAddAccountModal();
       await loadAccounts();
       await loadActiveAccount();
-      await loadFeed();
+      if (activeLocketAccount) {
+    await loadFeed();
+  }
     } else {
       showToast(res ? res.msg : 'Đăng nhập Locket thất bại', 'error');
     }
@@ -249,7 +317,9 @@ async function deleteAccount(accountId) {
     showToast(res.msg, 'success');
     await loadAccounts();
     await loadActiveAccount();
+    if (activeLocketAccount) {
     await loadFeed();
+  }
   }
 }
 
@@ -275,6 +345,9 @@ function closeAddAccountModal() {
 
 // ================= 3. TAB NAVIGATION =================
 function switchTab(tabId) {
+  if (!activeLocketAccount && tabId !== 'profile') {
+    tabId = 'profile';
+  }
   document.querySelectorAll('.tab-section').forEach(sec => sec.classList.add('hidden'));
   document.querySelectorAll('.nav-tab').forEach(btn => {
     btn.classList.remove('bg-amber-500', 'text-black', 'shadow-lg', 'shadow-amber-500/20');
@@ -286,6 +359,17 @@ function switchTab(tabId) {
     activeBtn.classList.add('bg-amber-500', 'text-black', 'shadow-lg', 'shadow-amber-500/20');
     activeBtn.classList.remove('text-gray-300');
   }
+
+  // Update mobile bottom nav tabs
+  document.querySelectorAll('.mobile-nav-tab').forEach(btn => {
+    if (btn.dataset.tab === tabId) {
+      btn.classList.add('text-amber-400');
+      btn.classList.remove('text-gray-400');
+    } else {
+      btn.classList.remove('text-amber-400');
+      btn.classList.add('text-gray-400');
+    }
+  });
 
   const activeSec = document.getElementById(`section-${tabId}`);
   if (activeSec) {
@@ -352,7 +436,7 @@ async function loadFeed() {
 
 function renderMomentCard(moment) {
   const authorName = moment.first_name ? `${moment.first_name} ${moment.last_name || ''}` : (moment.username || 'Bạn bè Locket');
-  const authorAvatar = moment.profile_picture_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80';
+  const authorAvatar = moment.profile_picture_url || '/images/locket.webp';
   const timeStr = moment.date ? new Date(moment.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Vừa xong';
   const isVideo = Boolean(moment.video_url);
 
@@ -491,7 +575,8 @@ async function loadPresets() {
 
 function renderCategories() {
   const container = document.getElementById('presets-categories');
-  let html = `<button onclick="selectCategory('all')" id="cat-all" class="cat-btn px-3 py-1 rounded-full text-[11px] font-bold bg-amber-500 text-black whitespace-nowrap">Tất cả (158)</button>`;
+  const total = Object.keys(allPresets).length;
+  let html = `<button onclick="selectCategory('all')" id="cat-all" class="cat-btn px-3 py-1 rounded-full text-[11px] font-bold bg-amber-500 text-black whitespace-nowrap">Tất cả (${total})</button>`;
   
   allCategories.forEach(cat => {
     html += `
@@ -534,8 +619,8 @@ function renderPresets() {
     const p = allPresets[key];
     const isSelected = selectedPresetKey === key;
     const bg = p.colors && p.colors.length >= 2 
-      ? `linear-gradient(135deg, ${p.colors[0]}, ${p.colors[1]})` 
-      : (p.colors && p.colors.length === 1 ? p.colors[0] : '#1A1E26');
+      ? `linear-gradient(135deg, ${p.colors.join(', ')})` 
+      : (p.colors && p.colors.length === 1 ? p.colors[0] : 'rgba(30, 36, 48, 0.9)');
     const color = p.text_color || '#FFFFFF';
 
     return `
@@ -553,9 +638,116 @@ function renderPresets() {
   }).join('');
 }
 
+function getFormattedBrowserTime() {
+  const now = new Date();
+  return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function refreshBrowserTime() {
+  const timeStr = getFormattedBrowserTime();
+  const captionInput = document.getElementById('post-caption-input');
+  if (captionInput) {
+    captionInput.value = timeStr;
+  }
+  if (allPresets['browser_time']) {
+    allPresets['browser_time'].text = timeStr;
+  }
+  updateLivePreview();
+  showToast(`Đã lấy giờ hiện tại: ${timeStr} ⏰`, 'info');
+}
+
+function setQuickLocation(cityName) {
+  const captionInput = document.getElementById('post-caption-input');
+  if (captionInput) {
+    captionInput.value = cityName;
+  }
+  updateLivePreview();
+  showToast(`Đã chọn vị trí: ${cityName} 📍`, 'info');
+}
+
+async function getBrowserGPSLocation() {
+  const statusText = document.getElementById('gps-status-text');
+  if (!navigator.geolocation) {
+    showToast('Trình duyệt của bạn không hỗ trợ Geolocation GPS.', 'error');
+    return;
+  }
+
+  if (statusText) statusText.textContent = 'Đang tìm GPS...';
+  showToast('Đang lấy vị trí GPS từ trình duyệt...', 'info');
+
+  navigator.geolocation.getCurrentPosition(
+    async (position) => {
+      const lat = position.coords.latitude;
+      const lon = position.coords.longitude;
+      
+      try {
+        const resp = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=14&addressdetails=1`, {
+          headers: { 'Accept-Language': 'vi,en' }
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          const addr = data.address || {};
+          const city = addr.city || addr.town || addr.county || addr.suburb || addr.state_district || addr.state || 'Vị trí hiện tại';
+          const captionInput = document.getElementById('post-caption-input');
+          if (captionInput) {
+            captionInput.value = city;
+          }
+          if (allPresets['browser_location_gps']) {
+            allPresets['browser_location_gps'].text = city;
+          }
+          updateLivePreview();
+          showToast(`Đã xác định vị trí GPS: ${city} 📍`, 'success');
+        } else {
+          fallbackLocation(lat, lon);
+        }
+      } catch (e) {
+        fallbackLocation(lat, lon);
+      } finally {
+        if (statusText) statusText.textContent = 'Lấy vị trí GPS';
+      }
+    },
+    (err) => {
+      console.warn('Geolocation error:', err);
+      if (statusText) statusText.textContent = 'Lấy vị trí GPS';
+      showToast('Không lấy được GPS (chưa cấp quyền). Bạn có thể bấm chọn nhanh các tỉnh thành bên dưới!', 'info');
+    },
+    { timeout: 8000, enableHighAccuracy: true }
+  );
+}
+
+function fallbackLocation(lat, lon) {
+  const coordStr = `${lat.toFixed(2)}°, ${lon.toFixed(2)}°`;
+  const captionInput = document.getElementById('post-caption-input');
+  if (captionInput) {
+    captionInput.value = coordStr;
+  }
+  updateLivePreview();
+  showToast(`Tọa độ GPS: ${coordStr}`, 'info');
+}
+
 function selectPreset(key) {
   selectedPresetKey = key;
   renderPresets();
+  const p = allPresets[key] || {};
+  const captionInput = document.getElementById('post-caption-input');
+
+  // Dynamic Time presets
+  if (key === 'browser_time' || key === 'browser_time_sunset' || key === 'browser_time_night') {
+    const timeStr = getFormattedBrowserTime();
+    if (captionInput) captionInput.value = timeStr;
+    p.text = timeStr;
+  } else if (key === 'browser_location_gps') {
+    getBrowserGPSLocation();
+  } else if (key.startsWith('location_')) {
+    if (captionInput && p.text) {
+      captionInput.value = p.text;
+    }
+  } else {
+    if (captionInput && !captionInput.value) {
+      captionInput.placeholder = p.text ? `Mẫu: "${p.text}" (Nhập nếu muốn đổi)...` : 'Nhập caption tùy thích...';
+    }
+  }
+
   updateLivePreview();
 }
 
@@ -585,18 +777,20 @@ function updateLivePreview() {
 
     pill.style.background = `linear-gradient(135deg, ${c1}, ${c2})`;
     pill.style.color = textColor;
-    pillIcon.textContent = emoji;
+    pillIcon.textContent = emoji || '✨';
     pillText.textContent = customCaption || 'Custom Gradient';
   } else {
     const p = allPresets[selectedPresetKey] || {};
     if (p.colors && p.colors.length >= 2) {
-      pill.style.background = `linear-gradient(135deg, ${p.colors[0]}, ${p.colors[1]})`;
+      pill.style.background = `linear-gradient(135deg, ${p.colors.join(', ')})`;
+    } else if (p.colors && p.colors.length === 1) {
+      pill.style.background = p.colors[0];
     } else {
-      pill.style.background = '#1A1E26';
+      pill.style.background = 'rgba(26, 30, 38, 0.95)';
     }
     pill.style.color = p.text_color || '#FFFFFF';
     pillIcon.textContent = p.icon || '';
-    pillText.textContent = customCaption || p.text || selectedPresetKey;
+    pillText.textContent = customCaption || p.text || 'Locket';
   }
 }
 
@@ -625,12 +819,15 @@ function setUploadMode(mode) {
 function handleFileSelected(files) {
   if (!files || !files.length) return;
   selectedFile = files[0];
+  window.capturedWebcamBase64 = null;
   const label = document.getElementById('selected-file-label');
   label.textContent = `✓ Đã chọn: ${selectedFile.name} (${(selectedFile.size / (1024 * 1024)).toFixed(2)} MB)`;
   label.classList.remove('hidden');
 
   const liveImg = document.getElementById('live-preview-img');
   const liveVideo = document.getElementById('live-preview-video');
+  const defaultOverlay = document.getElementById('live-preview-default-overlay');
+  if (defaultOverlay) defaultOverlay.classList.add('hidden');
 
   const fileUrl = URL.createObjectURL(selectedFile);
   if (selectedFile.type.startsWith('video/')) {
@@ -645,15 +842,39 @@ function handleFileSelected(files) {
 }
 
 async function startWebcam() {
+  stopWebcam();
+  const video = document.getElementById('webcam-video');
   try {
-    webcamStream = await navigator.mediaDevices.getUserMedia({
-      video: { width: { ideal: 1080 }, height: { ideal: 1080 }, facingMode: 'user' }
-    });
-    const video = document.getElementById('webcam-video');
-    video.srcObject = webcamStream;
+    const constraints = {
+      video: {
+        width: { ideal: 1080 },
+        height: { ideal: 1080 },
+        facingMode: currentFacingMode
+      }
+    };
+    webcamStream = await navigator.mediaDevices.getUserMedia(constraints);
+    if (video) {
+      video.srcObject = webcamStream;
+      video.style.transform = currentFacingMode === 'user' ? 'scaleX(-1)' : 'scaleX(1)';
+    }
   } catch (err) {
-    showToast('Không thể mở camera webcam: ' + err.message, 'error');
+    console.warn('getUserMedia facingMode error, fallback to default video device:', err.message);
+    try {
+      webcamStream = await navigator.mediaDevices.getUserMedia({ video: true });
+      if (video) {
+        video.srcObject = webcamStream;
+        video.style.transform = 'none';
+      }
+    } catch (e2) {
+      showToast('Không thể mở camera webcam: ' + e2.message, 'error');
+    }
   }
+}
+
+async function flipWebcam() {
+  currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
+  showToast(`Đang chuyển camera sang ${currentFacingMode === 'user' ? 'Trước (Selfie)' : 'Sau'}...`, 'info');
+  await startWebcam();
 }
 
 function stopWebcam() {
@@ -663,12 +884,21 @@ function stopWebcam() {
   }
 }
 
-function captureWebcam() {
+function captureWebcamSnapshot() {
   const video = document.getElementById('webcam-video');
-  const canvas = document.getElementById('webcam-canvas');
+  if (!video || !video.videoWidth) {
+    showToast('Camera chưa sẵn sàng, vui lòng đợi giây lát...', 'error');
+    return;
+  }
+  const canvas = document.getElementById('webcam-canvas') || document.createElement('canvas');
   canvas.width = video.videoWidth || 720;
   canvas.height = video.videoHeight || 720;
   const ctx = canvas.getContext('2d');
+
+  if (currentFacingMode === 'user') {
+    ctx.translate(canvas.width, 0);
+    ctx.scale(-1, 1);
+  }
   ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
   const base64 = canvas.toDataURL('image/jpeg', 0.9);
@@ -676,19 +906,101 @@ function captureWebcam() {
   // Hiển thị lên Live Preview
   const liveImg = document.getElementById('live-preview-img');
   const liveVideo = document.getElementById('live-preview-video');
+  const defaultOverlay = document.getElementById('live-preview-default-overlay');
+  if (defaultOverlay) defaultOverlay.classList.add('hidden');
   liveVideo.classList.add('hidden');
   liveImg.classList.remove('hidden');
   liveImg.src = base64;
+  liveImg.classList.remove('opacity-60');
 
   window.capturedWebcamBase64 = base64;
   selectedFile = null;
+  const label = document.getElementById('selected-file-label');
+  if (label) {
+    label.textContent = `✓ Đã chụp từ Webcam (${currentFacingMode === 'user' ? 'Camera Trước' : 'Camera Sau'})`;
+    label.classList.remove('hidden');
+  }
   showToast('Đã chụp ảnh webcam thành công!', 'success');
+}
+const captureWebcam = captureWebcamSnapshot;
+
+// Audience & Specific Friends Selection
+async function handleAudienceChange(value) {
+  const box = document.getElementById('friends-selector-box');
+  if (!box) return;
+  if (value === 'select') {
+    box.classList.remove('hidden');
+    await loadFriendsForAudience();
+  } else {
+    box.classList.add('hidden');
+  }
+}
+
+async function loadFriendsForAudience() {
+  const listEl = document.getElementById('post-friends-list');
+  if (!listEl) return;
+
+  if (cachedAudienceFriends.length > 0) {
+    renderAudienceFriendsList(cachedAudienceFriends);
+    return;
+  }
+
+  listEl.innerHTML = `<div class="text-xs text-gray-500 py-3 text-center col-span-full">Đang tải danh sách bạn bè...</div>`;
+  const res = await apiFetch('/api/locket/friends');
+  if (res && res.success && res.data) {
+    cachedAudienceFriends = res.data;
+    renderAudienceFriendsList(cachedAudienceFriends);
+  } else {
+    listEl.innerHTML = `<div class="text-xs text-rose-400 py-3 text-center col-span-full">Không thể tải bạn bè để chọn.</div>`;
+  }
+}
+
+function renderAudienceFriendsList(friends) {
+  const listEl = document.getElementById('post-friends-list');
+  if (!listEl) return;
+
+  if (!friends || friends.length === 0) {
+    listEl.innerHTML = `<div class="text-xs text-gray-500 py-3 text-center col-span-full">Bạn chưa có bạn bè Locket nào.</div>`;
+    return;
+  }
+
+  listEl.innerHTML = friends.map(f => {
+    const name = (f.first_name ? `${f.first_name} ${f.last_name || ''}`.trim() : f.username) || 'Bạn bè';
+    const uid = f.uid || f.id;
+    const avatar = f.profile_picture_url || DEFAULT_AVATAR;
+    return `
+      <label class="p-2.5 rounded-xl bg-obsidian-900 border border-white/[0.08] hover:border-amber-500/40 flex items-center gap-2.5 cursor-pointer transition select-none">
+        <input type="checkbox" name="post-recipient-friend" value="${uid}" onchange="updateSelectedFriendsCount()" class="rounded border-gray-600 text-amber-500 focus:ring-amber-400">
+        <img src="${avatar}" class="w-7 h-7 rounded-full object-cover border border-white/10 shrink-0">
+        <div class="truncate">
+          <p class="text-xs font-semibold text-gray-200 truncate leading-tight">${escapeHtml(name)}</p>
+          <p class="text-[10px] text-amber-400 font-mono truncate leading-tight">@${f.username || 'user'}</p>
+        </div>
+      </label>
+    `;
+  }).join('');
+  updateSelectedFriendsCount();
+}
+
+function updateSelectedFriendsCount() {
+  const checked = document.querySelectorAll('input[name="post-recipient-friend"]:checked');
+  const countEl = document.getElementById('selected-friends-count');
+  if (countEl) countEl.textContent = checked.length;
+}
+
+function toggleSelectAllFriends() {
+  const cbs = document.querySelectorAll('input[name="post-recipient-friend"]');
+  const allChecked = Array.from(cbs).length > 0 && Array.from(cbs).every(cb => cb.checked);
+  cbs.forEach(cb => cb.checked = !allChecked);
+  const btn = document.getElementById('btn-toggle-all-friends');
+  if (btn) btn.textContent = !allChecked ? 'Bỏ chọn tất cả' : 'Chọn tất cả';
+  updateSelectedFriendsCount();
 }
 
 async function submitMomentPost() {
   const isCustom = document.getElementById('custom-gradient-toggle').checked;
   const caption = document.getElementById('post-caption-input').value.trim();
-  const audience = document.querySelector('input[name="audience"]:checked').value;
+  const audience = (document.querySelector('input[name="audience"]:checked') || {}).value || 'all';
 
   if (!selectedFile && !window.capturedWebcamBase64) {
     showToast('Vui lòng chọn file ảnh/video hoặc chụp ảnh từ webcam', 'error');
@@ -710,6 +1022,18 @@ async function submitMomentPost() {
     formData.append('caption', caption);
     formData.append('isPrivate', audience === 'self');
 
+    if (audience === 'select') {
+      const selectedUids = Array.from(document.querySelectorAll('input[name="post-recipient-friend"]:checked')).map(cb => cb.value);
+      if (selectedUids.length === 0) {
+        showToast('Vui lòng chọn ít nhất 1 người bạn để gửi khoảnh khắc!', 'error');
+        btn.disabled = false;
+        btn.innerHTML = `<i data-lucide="rocket" class="w-5 h-5"></i><span>ĐĂNG KHOẢNH KHẮC LÊN LOCKET NGAY</span>`;
+        lucide.createIcons();
+        return;
+      }
+      formData.append('recipients', JSON.stringify(selectedUids));
+    }
+
     if (isCustom) {
       formData.append('noteType', 'standard');
       formData.append('colors', JSON.stringify([
@@ -717,13 +1041,16 @@ async function submitMomentPost() {
         document.getElementById('custom-color-2').value
       ]));
       formData.append('textColor', document.getElementById('custom-text-color').value);
-      formData.append('icon', document.getElementById('custom-emoji').value);
+      formData.append('icon', document.getElementById('custom-emoji').value || '🚀');
     } else {
       const p = allPresets[selectedPresetKey] || {};
       formData.append('noteType', selectedPresetKey);
-      if (p.colors) formData.append('colors', JSON.stringify(p.colors));
+      if (p.colors && p.colors.length) formData.append('colors', JSON.stringify(p.colors));
       if (p.text_color) formData.append('textColor', p.text_color);
       if (p.icon) formData.append('icon', p.icon);
+      if (!caption && p.text) {
+        formData.set('caption', p.text);
+      }
     }
 
     const token = localStorage.getItem('locket_jwt_token');
@@ -740,6 +1067,18 @@ async function submitMomentPost() {
       window.capturedWebcamBase64 = null;
       document.getElementById('selected-file-label').classList.add('hidden');
       document.getElementById('post-caption-input').value = '';
+      
+      // Reset Live Preview về hero.jpeg và hiện lại overlay nhắc nhở
+      const liveImg = document.getElementById('live-preview-img');
+      const liveVideo = document.getElementById('live-preview-video');
+      if (liveVideo) liveVideo.classList.add('hidden');
+      if (liveImg) {
+        liveImg.src = '/images/hero.jpeg';
+        liveImg.classList.remove('hidden');
+      }
+      const defaultOverlay = document.getElementById('live-preview-default-overlay');
+      if (defaultOverlay) defaultOverlay.classList.remove('hidden');
+
       switchTab('feed');
     } else {
       showToast(res ? res.msg : 'Đăng khoảnh khắc thất bại', 'error');
@@ -775,7 +1114,7 @@ async function loadFriends() {
   container.innerHTML = friends.map(f => `
     <div class="glass-panel p-4 rounded-3xl border border-white/[0.08] hover:border-amber-500/30 transition flex flex-col justify-between">
       <div class="flex items-center gap-3 mb-3">
-        <img src="${f.profile_picture_url || '/images/hero.jpeg'}" class="w-12 h-12 rounded-full object-cover border border-amber-500/30">
+        <img src="${f.profile_picture_url || '/images/locket.webp'}" class="w-12 h-12 rounded-full object-cover border border-amber-500/30">
         <div class="truncate">
           <h4 class="text-xs font-bold text-white truncate">${f.first_name ? `${f.first_name} ${f.last_name || ''}` : f.username}</h4>
           <p class="text-[11px] text-amber-400 font-mono truncate">@${f.username || 'user'}</p>
@@ -860,7 +1199,7 @@ async function loadFriendRequests() {
       ${incoming.length ? incoming.map(req => `
         <div class="glass-panel p-3.5 rounded-2xl flex items-center justify-between">
           <div class="flex items-center gap-3">
-            <img src="${req.user_profile_pic || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'}" class="w-10 h-10 rounded-full object-cover">
+            <img src="${req.user_profile_pic || '/images/locket.webp'}" class="w-10 h-10 rounded-full object-cover">
             <div>
               <p class="text-xs font-bold text-white">${req.user_name || req.user_uid}</p>
               <p class="text-[10px] text-gray-400 font-mono">@${req.username || 'user'}</p>
@@ -897,13 +1236,13 @@ async function loadConversations() {
   }
 
   container.innerHTML = res.data.map(c => `
-    <div onclick="selectConversation('${c.peer_uid || c.id}', '${c.peer_name || 'Bạn bè'}', '${c.peer_avatar || ''}', '${c.peer_username || ''}')" 
+    <div onclick="selectConversation('${c.peer_uid}', '${escapeHtml(c.peer_name || 'Bạn bè')}', '${c.peer_avatar || ''}', '${c.peer_username || ''}', '${c.conversation_id || ''}')" 
          class="p-3 hover:bg-white/[0.04] cursor-pointer flex items-center justify-between gap-3 transition">
       <div class="flex items-center gap-2.5 truncate">
-        <img src="${c.peer_avatar || '/images/hero.jpeg'}" class="w-10 h-10 rounded-full object-cover border border-amber-500/20">
+        <img src="${c.peer_avatar || DEFAULT_AVATAR}" class="w-10 h-10 rounded-full object-cover border border-amber-500/20 shrink-0 bg-white/5">
         <div class="truncate">
-          <h4 class="text-xs font-bold text-white truncate">${c.peer_name || c.peer_username || 'Bạn bè'}</h4>
-          <p class="text-[11px] text-gray-400 truncate">${c.last_message || 'Bắt đầu trò chuyện'}</p>
+          <h4 class="text-xs font-bold text-white truncate">${escapeHtml(c.peer_name || c.peer_username || 'Bạn bè')}</h4>
+          <p class="text-[11px] text-gray-400 truncate">${escapeHtml(c.last_message || 'Bắt đầu trò chuyện')}</p>
         </div>
       </div>
       ${c.unread_count ? `<span class="px-2 py-0.5 rounded-full bg-rose-500 text-white text-[10px] font-bold">${c.unread_count}</span>` : ''}
@@ -913,23 +1252,28 @@ async function loadConversations() {
 
 function openChatWithAuthor(peerUid, peerName, peerAvatar, peerUsername) {
   switchTab('chat');
-  selectConversation(peerUid, peerName, peerAvatar, peerUsername);
+  selectConversation(peerUid, peerName, peerAvatar, peerUsername, null);
 }
 
-async function selectConversation(peerUid, peerName, peerAvatar, peerUsername) {
+async function selectConversation(peerUid, peerName, peerAvatar, peerUsername, conversationId = null) {
   activePeerUid = peerUid;
-  activePeerDetails = { peerUid, peerName, peerAvatar, peerUsername };
+  activePeerDetails = { peerUid, peerName, peerAvatar, peerUsername, conversationId };
 
-  document.getElementById('chat-peer-name').textContent = peerName;
+  document.getElementById('chat-peer-name').textContent = peerName || 'Bạn bè Locket';
   document.getElementById('chat-peer-username').textContent = peerUsername ? `@${peerUsername}` : '';
-  if (peerAvatar) document.getElementById('chat-peer-avatar').src = peerAvatar;
+  const avatarEl = document.getElementById('chat-peer-avatar');
+  if (avatarEl) avatarEl.src = peerAvatar || DEFAULT_AVATAR;
 
   const container = document.getElementById('chat-messages-container');
-  container.innerHTML = `<div class="m-auto text-center text-gray-500 text-xs">Đang tải tin nhắn...</div>`;
+  container.innerHTML = `<div class="m-auto text-center text-gray-500 text-xs flex items-center justify-center gap-2"><div class="w-4 h-4 border-2 border-amber-400 border-t-transparent rounded-full animate-spin"></div><span>Đang tải tin nhắn...</span></div>`;
 
-  const res = await apiFetch(`/api/locket/chat/messages/${peerUid}`);
-  if (!res || !res.success || !res.data) {
-    container.innerHTML = `<div class="m-auto text-center text-gray-500 text-xs">Chưa có tin nhắn nào trong cuộc trò chuyện này.</div>`;
+  const url = conversationId 
+    ? `/api/locket/chat/messages/${peerUid}?conversationId=${encodeURIComponent(conversationId)}` 
+    : `/api/locket/chat/messages/${peerUid}`;
+
+  const res = await apiFetch(url);
+  if (!res || !res.success || !res.data || !res.data.length) {
+    container.innerHTML = `<div class="m-auto text-center text-gray-500 text-xs">Chưa có tin nhắn nào trong cuộc trò chuyện này.<br><span class="text-amber-400 mt-1 inline-block">Hãy gửi tin nhắn đầu tiên!</span></div>`;
     return;
   }
 
@@ -939,15 +1283,16 @@ async function selectConversation(peerUid, peerName, peerAvatar, peerUsername) {
 }
 
 function renderChatMessage(msg) {
-  const isMe = msg.is_me || msg.sender_uid === (activeLocketAccount ? activeLocketAccount.id : '');
+  const myLocketUid = (activeLocketAccount && (activeLocketAccount.locket_uid || activeLocketAccount.id)) || '';
+  const isMe = msg.is_me === true || (myLocketUid && msg.sender_uid === myLocketUid);
   const text = msg.msg || msg.text || '';
   const time = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
 
   return `
     <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-full">
       <div class="max-w-[75%] px-4 py-2.5 rounded-2xl text-xs ${isMe ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-black font-semibold rounded-br-none shadow-md' : 'bg-obsidian-800 text-gray-100 rounded-bl-none border border-white/10'}">
-        <p>${text}</p>
-        <span class="text-[9px] ${isMe ? 'text-black/60' : 'text-gray-500'} block text-right mt-1">${time}</span>
+        <p class="whitespace-pre-wrap break-words">${escapeHtml(text)}</p>
+        <span class="text-[9px] ${isMe ? 'text-black/60' : 'text-gray-500'} block text-right mt-1 font-mono">${time}</span>
       </div>
     </div>
   `;
@@ -981,7 +1326,7 @@ async function sendChatMessage() {
 
 function refreshCurrentChat() {
   if (activePeerUid && activePeerDetails) {
-    selectConversation(activePeerUid, activePeerDetails.peerName, activePeerDetails.peerAvatar, activePeerDetails.peerUsername);
+    selectConversation(activePeerUid, activePeerDetails.peerName, activePeerDetails.peerAvatar, activePeerDetails.peerUsername, activePeerDetails.conversationId);
   }
 }
 

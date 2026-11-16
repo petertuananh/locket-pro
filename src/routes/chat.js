@@ -3,16 +3,38 @@ const router = express.Router();
 const { requireAuth } = require('../middleware/auth');
 const locketManager = require('../services/locketService');
 
-// 1. Lấy danh sách hội thoại
+// 1. Lấy danh sách hội thoại kèm thông tin bạn bè
 router.get('/conversations', requireAuth, async (req, res) => {
   try {
     const { client } = await locketManager.getActiveClientForUser(req.user.id);
     const conversations = await client.chat.getConversations();
 
+    let friendMap = {};
+    try {
+      const friends = await client.friends.getAllFriends();
+      (friends || []).forEach(f => {
+        friendMap[f.uid] = f;
+      });
+    } catch (fe) {
+      console.warn('Lỗi nạp friends để ghép thông tin conversations:', fe.message);
+    }
+
+    const enriched = (conversations || []).map(c => {
+      const f = friendMap[c.peer_uid] || {};
+      const name = (f.first_name ? `${f.first_name} ${f.last_name || ''}`.trim() : f.username) || 'Bạn bè Locket';
+      return {
+        ...c,
+        peer_name: name,
+        peer_username: f.username || '',
+        peer_avatar: f.profile_picture_url || '',
+        last_message: (c.latest_message && c.latest_message.text) || ''
+      };
+    });
+
     res.json({
       code: 200,
       success: true,
-      data: conversations || []
+      data: enriched
     });
   } catch (err) {
     const code = err.statusCode || 400;
@@ -32,10 +54,16 @@ router.get('/messages/:peerUid', requireAuth, async (req, res) => {
       conversationId: conversationId
     });
 
+    const myUid = client.session ? client.session.uid : null;
+    const mapped = (messages || []).map(m => ({
+      ...m,
+      is_me: (myUid && m.sender_uid === myUid) || m.is_me || false
+    }));
+
     res.json({
       code: 200,
       success: true,
-      data: messages || []
+      data: mapped
     });
   } catch (err) {
     const code = err.statusCode || 400;

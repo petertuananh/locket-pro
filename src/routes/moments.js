@@ -146,7 +146,10 @@ router.post('/post', requireAuth, upload.single('file'), async (req, res) => {
     let parsedRecipients = null;
     if (recipients) {
       try {
-        parsedRecipients = typeof recipients === 'string' ? JSON.parse(recipients) : recipients;
+        const parsed = typeof recipients === 'string' ? JSON.parse(recipients) : recipients;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          parsedRecipients = parsed;
+        }
       } catch (_) {
         parsedRecipients = null;
       }

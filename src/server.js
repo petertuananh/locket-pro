@@ -85,6 +85,17 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {});
 });
 
+// 404 Not Found Handler
+app.use((req, res) => {
+  if (req.path.startsWith('/api/')) {
+    return res.status(404).json({ code: 404, success: false, msg: 'Không tìm thấy API endpoint này.' });
+  }
+  if (req.accepts('html')) {
+    return res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
+  }
+  res.status(404).json({ code: 404, success: false, msg: 'Không tìm thấy trang hoặc tài nguyên này.' });
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error('Unhandled Server Error:', err);

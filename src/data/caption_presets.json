@@ -2,12 +2,132 @@
   "standard": {
     "overlay_id": "caption:standard",
     "type": "standard",
-    "text": "",
-    "icon": null,
-    "colors": [],
+    "text": "Khoảnh khắc Locket",
+    "icon": "💛",
+    "colors": [
+      "#262C38",
+      "#11141B"
+    ],
     "text_color": "#FFFFFF",
     "max_lines": 1,
     "section": "🎨 General"
+  },
+  "browser_time": {
+    "overlay_id": "caption:browser_time",
+    "type": "dynamic_time",
+    "text": "Giờ hiện tại",
+    "icon": "⏰",
+    "colors": [
+      "#1E3A8A",
+      "#0F172A"
+    ],
+    "text_color": "#93C5FD",
+    "max_lines": 1,
+    "section": "⏰ Giờ & Vị trí"
+  },
+  "browser_time_sunset": {
+    "overlay_id": "caption:browser_time_sunset",
+    "type": "dynamic_time",
+    "text": "Hoàng hôn",
+    "icon": "🌆",
+    "colors": [
+      "#F97316",
+      "#7C2D12"
+    ],
+    "text_color": "#FED7AA",
+    "max_lines": 1,
+    "section": "⏰ Giờ & Vị trí"
+  },
+  "browser_time_night": {
+    "overlay_id": "caption:browser_time_night",
+    "type": "dynamic_time",
+    "text": "Đêm muộn",
+    "icon": "🌙",
+    "colors": [
+      "#312E81",
+      "#1E1B4B"
+    ],
+    "text_color": "#C7D2FE",
+    "max_lines": 1,
+    "section": "⏰ Giờ & Vị trí"
+  },
+  "browser_location_gps": {
+    "overlay_id": "caption:browser_location_gps",
+    "type": "dynamic_location",
+    "text": "Vị trí GPS",
+    "icon": "📍",
+    "colors": [
+      "#047857",
+      "#064E3B"
+    ],
+    "text_color": "#A7F3D0",
+    "max_lines": 1,
+    "section": "⏰ Giờ & Vị trí"
+  },
+  "location_hanoi": {
+    "overlay_id": "caption:location_hanoi",
+    "type": "static_content",
+    "text": "Hà Nội",
+    "icon": "📍",
+    "colors": [
+      "#B91C1C",
+      "#450A0A"
+    ],
+    "text_color": "#FECACA",
+    "max_lines": 1,
+    "section": "⏰ Giờ & Vị trí"
+  },
+  "location_saigon": {
+    "overlay_id": "caption:location_saigon",
+    "type": "static_content",
+    "text": "TP. Hồ Chí Minh",
+    "icon": "📍",
+    "colors": [
+      "#0284C7",
+      "#082F49"
+    ],
+    "text_color": "#BAE6FD",
+    "max_lines": 1,
+    "section": "⏰ Giờ & Vị trí"
+  },
+  "location_danang": {
+    "overlay_id": "caption:location_danang",
+    "type": "static_content",
+    "text": "Đà Nẵng",
+    "icon": "🌊",
+    "colors": [
+      "#0D9488",
+      "#134E4A"
+    ],
+    "text_color": "#CCFBF1",
+    "max_lines": 1,
+    "section": "⏰ Giờ & Vị trí"
+  },
+  "location_dongnai": {
+    "overlay_id": "caption:location_dongnai",
+    "type": "static_content",
+    "text": "Biên Hòa, Đồng Nai",
+    "icon": "📍",
+    "colors": [
+      "#4F46E5",
+      "#312E81"
+    ],
+    "text_color": "#E0E7FF",
+    "max_lines": 1,
+    "section": "⏰ Giờ & Vị trí"
+  },
+  "location_dalat": {
+    "overlay_id": "caption:location_dalat",
+    "type": "static_content",
+    "text": "Đà Lạt mù sương",
+    "icon": "🌲",
+    "colors": [
+      "#065F46",
+      "#022C22"
+    ],
+    "text_color": "#D1FAE5",
+    "max_lines": 1,
+    "section": "⏰ Giờ & Vị trí"
   },
   "halloween_2026": {
     "overlay_id": "caption:halloween_2026",
@@ -90,19 +210,25 @@
   "review": {
     "overlay_id": "caption:review",
     "type": "review",
-    "text": "",
-    "icon": null,
-    "colors": [],
-    "text_color": "#FFFFFF",
+    "text": "Đánh giá Locket",
+    "icon": "⭐",
+    "colors": [
+      "#F59E0B",
+      "#D97706"
+    ],
+    "text_color": "#000000",
     "max_lines": 1,
     "section": "🎨 General"
   },
   "music": {
     "overlay_id": "caption:music",
     "type": "music",
-    "text": "",
-    "icon": null,
-    "colors": [],
+    "text": "Đang nghe nhạc",
+    "icon": "🎵",
+    "colors": [
+      "#1DB954",
+      "#121212"
+    ],
     "text_color": "#FFFFFF",
     "max_lines": 1,
     "section": "🎨 General"
@@ -110,9 +236,12 @@
   "location": {
     "overlay_id": "caption:location",
     "type": "location",
-    "text": "",
-    "icon": null,
-    "colors": [],
+    "text": "Vị trí của tôi",
+    "icon": "📍",
+    "colors": [
+      "#EF4444",
+      "#991B1B"
+    ],
     "text_color": "#FFFFFF",
     "max_lines": 1,
     "section": "🎨 General"
@@ -120,9 +249,12 @@
   "weather": {
     "overlay_id": "caption:weather",
     "type": "weather",
-    "text": "",
-    "icon": null,
-    "colors": [],
+    "text": "Thời tiết hôm nay",
+    "icon": "☀️",
+    "colors": [
+      "#38BDF8",
+      "#0284C7"
+    ],
     "text_color": "#FFFFFF",
     "max_lines": 1,
     "section": "🎨 General"
@@ -130,9 +262,12 @@
   "time": {
     "overlay_id": "caption:time",
     "type": "time",
-    "text": "",
-    "icon": null,
-    "colors": [],
+    "text": "Thời gian thực",
+    "icon": "⏰",
+    "colors": [
+      "#8B5CF6",
+      "#6D28D9"
+    ],
     "text_color": "#FFFFFF",
     "max_lines": 1,
     "section": "🎨 General"
@@ -140,9 +275,12 @@
   "streak": {
     "overlay_id": "caption:streak",
     "type": "streak",
-    "text": "",
-    "icon": null,
-    "colors": [],
+    "text": "Chuỗi ngày kết nối",
+    "icon": "🔥",
+    "colors": [
+      "#F97316",
+      "#C2410C"
+    ],
     "text_color": "#FFFFFF",
     "max_lines": 1,
     "section": "🎨 General"
@@ -150,9 +288,12 @@
   "star_sign": {
     "overlay_id": "caption:star_sign",
     "type": "star_sign",
-    "text": "",
-    "icon": null,
-    "colors": [],
+    "text": "Cung hoàng đạo",
+    "icon": "✨",
+    "colors": [
+      "#EC4899",
+      "#BE185D"
+    ],
     "text_color": "#FFFFFF",
     "max_lines": 1,
     "section": "🎨 General"
@@ -160,9 +301,12 @@
   "poll": {
     "overlay_id": "caption:poll",
     "type": "poll",
-    "text": "",
-    "icon": null,
-    "colors": [],
+    "text": "Bình chọn ý kiến",
+    "icon": "📊",
+    "colors": [
+      "#06B6D4",
+      "#0E7490"
+    ],
     "text_color": "#FFFFFF",
     "max_lines": 1,
     "section": "🎨 General"
@@ -170,12 +314,15 @@
   "color_palette": {
     "overlay_id": "caption:color_palette",
     "type": "color_palette",
-    "text": "",
-    "icon": null,
-    "colors": [],
+    "text": "Sắc màu cuộc sống",
+    "icon": "🎨",
+    "colors": [
+      "#10B981",
+      "#047857"
+    ],
     "text_color": "#FFFFFF",
     "max_lines": 1,
-    "section": "General"
+    "section": "🎨 General"
   },
   "party_time": {
     "overlay_id": "caption:party_time",
@@ -193,10 +340,13 @@
   "locket_count": {
     "overlay_id": "caption:locket_count",
     "type": "locket_count",
-    "text": "",
-    "icon": null,
-    "colors": [],
-    "text_color": "#FFFFFF",
+    "text": "Số lượng ảnh Locket",
+    "icon": "📸",
+    "colors": [
+      "#EAB308",
+      "#A16207"
+    ],
+    "text_color": "#000000",
     "max_lines": 1,
     "section": "🎨 General"
   },
@@ -1022,9 +1172,12 @@
   "colors": {
     "overlay_id": "caption:colors",
     "type": "colors",
-    "text": "",
-    "icon": null,
-    "colors": [],
+    "text": "Dải màu Gradient",
+    "icon": "🌈",
+    "colors": [
+      "#A855F7",
+      "#EC4899"
+    ],
     "text_color": "#FFFFFF",
     "max_lines": 1,
     "section": "🎨 General"

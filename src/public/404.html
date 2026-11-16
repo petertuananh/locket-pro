@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="vi" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>404 - Không tìm thấy trang | Locket Pro</title>
+  <link rel="icon" type="image/webp" href="/images/locket.webp">
+  <link rel="apple-touch-icon" href="/images/locket.webp">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            locket: { 500: '#f59e0b', 600: '#d97706' },
+            obsidian: { 950: '#06080B', 900: '#090B0E', 850: '#0F1219', 800: '#141822' }
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="/css/custom.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-obsidian-900 text-gray-100 min-h-screen flex flex-col items-center justify-center p-4 selection:bg-amber-500 selection:text-black">
+  <script src="/js/particles.js"></script>
+
+  <div class="glass-panel max-w-md w-full p-8 rounded-3xl border border-white/10 text-center relative z-10 space-y-6 shadow-2xl">
+    <!-- Brand Icon -->
+    <div class="relative inline-block">
+      <img src="/images/locket.webp" alt="Locket Pro" class="w-20 h-20 mx-auto rounded-3xl shadow-xl shadow-amber-500/30 ring-2 ring-amber-500/40 animate-pulse object-cover">
+    </div>
+
+    <!-- Error Code & Title -->
+    <div>
+      <h1 class="text-6xl font-extrabold tracking-tight bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 bg-clip-text text-transparent">
+        404
+      </h1>
+      <h2 class="text-xl font-bold text-white mt-2">Trang không tồn tại</h2>
+      <p class="text-xs text-gray-400 mt-2 leading-relaxed">
+        Đường dẫn bạn yêu cầu không tồn tại, đã bị đổi tên hoặc không còn khả dụng trên máy chủ.
+      </p>
+    </div>
+
+    <!-- Navigation Buttons -->
+    <div class="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+      <a href="/app" class="w-full sm:w-auto btn-locket px-6 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2">
+        <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+        <span>Vào Web App</span>
+      </a>
+      <a href="/" class="w-full sm:w-auto px-6 py-2.5 rounded-xl text-xs font-semibold text-gray-300 hover:text-white bg-obsidian-850 hover:bg-white/10 border border-white/10 transition flex items-center justify-center gap-2">
+        <i data-lucide="home" class="w-4 h-4"></i>
+        <span>Về Trang chủ</span>
+      </a>
+    </div>
+
+    <div class="pt-2 border-t border-white/[0.06]">
+      <span class="text-[10px] text-gray-500">Locket Pro Web Client &bull; 2026</span>
+    </div>
+  </div>
+
+  <script>
+    lucide.createIcons();
+  </script>
+</body>
+</html>
