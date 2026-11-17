@@ -466,8 +466,10 @@ function formatMomentTime(dateStr) {
 }
 
 function renderMomentCard(moment) {
-  const authorName = moment.author_name || (moment.first_name ? `${moment.first_name} ${moment.last_name || ''}`.trim() : (moment.username ? `@${moment.username}` : 'Bạn bè Locket'));
-  const authorAvatar = moment.profile_picture_url || DEFAULT_AVATAR;
+  const myLocketUid = (activeLocketAccount && (activeLocketAccount.locket_uid || activeLocketAccount.id)) || '';
+  const isMe = moment.is_me === true || (myLocketUid && (moment.user === myLocketUid || moment.user_uid === myLocketUid));
+  const authorName = isMe ? 'Tôi (Chính bạn)' : (moment.author_name || (moment.first_name ? `${moment.first_name} ${moment.last_name || ''}`.trim() : (moment.username ? `@${moment.username}` : 'Bạn bè Locket')));
+  const authorAvatar = (isMe && activeLocketAccount && activeLocketAccount.avatar_url) ? activeLocketAccount.avatar_url : (moment.profile_picture_url || DEFAULT_AVATAR);
   const timeStr = formatMomentTime(moment.date);
   const isVideo = Boolean(moment.video_url);
 
@@ -497,7 +499,7 @@ function renderMomentCard(moment) {
   const momentId = moment.id || moment.canonical_uid || moment.moment_uid || moment.uid;
 
   return `
-    <div class="glass-panel rounded-3xl overflow-hidden border border-white/[0.08] hover:border-amber-500/30 transition flex flex-col shadow-lg">
+    <div id="moment-card-${momentId}" data-moment-id="${momentId}" class="glass-panel rounded-3xl overflow-hidden border border-white/[0.08] hover:border-amber-500/30 transition-all duration-300 flex flex-col shadow-lg">
       <!-- Card Header -->
       <div class="p-3.5 flex items-center justify-between border-b border-white/[0.06]">
         <div class="flex items-center gap-2.5 min-w-0">
@@ -507,7 +509,14 @@ function renderMomentCard(moment) {
             <p class="text-[10px] text-gray-400 font-mono leading-tight">${timeStr}</p>
           </div>
         </div>
-        ${moment.is_me ? `<span class="text-[9px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-semibold border border-amber-500/30 flex-shrink-0">Của bạn</span>` : ''}
+        <div class="flex items-center gap-1.5 flex-shrink-0">
+          ${isMe ? `
+            <span class="text-[9px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-semibold border border-amber-500/30">Của bạn</span>
+            <button onclick="deleteMyMoment('${momentId}')" title="Xóa khoảnh khắc này" class="p-1 rounded-lg text-gray-400 hover:text-rose-400 hover:bg-rose-500/10 transition">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+            </button>
+          ` : ''}
+        </div>
       </div>
 
       <!-- Media Viewport 1:1 -->
@@ -526,10 +535,17 @@ function renderMomentCard(moment) {
           <i data-lucide="eye" class="w-3.5 h-3.5"></i>
           <span>Lượt xem</span>
         </button>
-        <button onclick="openChatWithAuthor('${moment.user || moment.user_uid}', '${escapeHtml(authorName)}', '${authorAvatar}')" class="hover:text-amber-300 flex items-center gap-1.5 transition">
-          <i data-lucide="message-circle" class="w-3.5 h-3.5"></i>
-          <span>Nhắn tin</span>
-        </button>
+        ${isMe ? `
+          <button onclick="deleteMyMoment('${momentId}')" class="text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 px-2.5 py-1 rounded-xl flex items-center gap-1.5 transition font-semibold border border-rose-500/20">
+            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+            <span>Xóa locket</span>
+          </button>
+        ` : `
+          <button onclick="openChatWithAuthor('${moment.user || moment.user_uid}', '${escapeHtml(authorName)}', '${authorAvatar}')" class="hover:text-amber-300 flex items-center gap-1.5 transition">
+            <i data-lucide="message-circle" class="w-3.5 h-3.5"></i>
+            <span>Nhắn tin</span>
+          </button>
+        `}
       </div>
 
       <!-- Reaction Emojis Bar -->
@@ -544,6 +560,43 @@ function renderMomentCard(moment) {
       </div>
     </div>
   `;
+}
+
+async function deleteMyMoment(momentUid) {
+  if (!momentUid) return;
+  const confirmed = confirm('Bạn có chắc chắn muốn xóa khoảnh khắc Locket này không?\nThao tác này sẽ xóa vĩnh viễn bài đăng này trên Locket.');
+  if (!confirmed) return;
+
+  showToast('Đang tiến hành xóa khoảnh khắc...', 'info');
+
+  try {
+    const res = await apiFetch(`/api/locket/moments/${momentUid}`, {
+      method: 'DELETE'
+    });
+
+    if (res && res.success) {
+      showToast('Đã xóa khoảnh khắc Locket thành công!', 'success');
+      const card = document.getElementById(`moment-card-${momentUid}`) || document.querySelector(`[data-moment-id="${momentUid}"]`);
+      if (card) {
+        card.style.opacity = '0';
+        card.style.transform = 'scale(0.9)';
+        setTimeout(() => {
+          card.remove();
+          const container = document.getElementById('feed-container');
+          if (container && !container.children.length) {
+            loadFeed();
+          }
+        }, 300);
+      } else {
+        loadFeed();
+      }
+    } else {
+      showToast(res ? res.msg : 'Xóa khoảnh khắc thất bại', 'error');
+    }
+  } catch (err) {
+    console.error('Lỗi khi xóa khoảnh khắc:', err);
+    showToast('Lỗi khi xóa khoảnh khắc: ' + err.message, 'error');
+  }
 }
 
 async function sendMomentReaction(momentUid, emoji) {
