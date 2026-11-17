@@ -108,13 +108,33 @@ async function apiFetch(endpoint, options = {}) {
     headers['Authorization'] = `Bearer ${token}`;
   }
   options.headers = headers;
-  const response = await fetch(endpoint, options);
-  if (response.status === 401) {
-    localStorage.removeItem('locket_jwt_token');
-    window.location.href = '/';
-    return null;
+
+  try {
+    const response = await fetch(endpoint, options);
+    if (response.status === 401) {
+      localStorage.removeItem('locket_jwt_token');
+      window.location.href = '/';
+      return null;
+    }
+
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      return await response.json();
+    } else {
+      const text = await response.text();
+      try {
+        return JSON.parse(text);
+      } catch (_) {
+        if (!response.ok) {
+          return { success: false, msg: `Lỗi máy chủ (${response.status}: ${response.statusText || 'Không xác định'})` };
+        }
+        return { success: false, msg: text || 'Phản hồi không hợp lệ' };
+      }
+    }
+  } catch (netErr) {
+    console.error('Lỗi mạng apiFetch:', netErr);
+    return { success: false, msg: netErr.message || 'Lỗi kết nối máy chủ' };
   }
-  return response.json();
 }
 
 function showToast(message, type = 'info') {
@@ -1162,7 +1182,25 @@ async function submitMomentPost() {
       body: formData
     });
 
-    const res = await response.json();
+    let res = null;
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      res = await response.json();
+    } else {
+      const rawText = await response.text();
+      if (response.status === 413) {
+        throw new Error('Tệp video quá lớn (vượt quá dung lượng cho phép của máy chủ).');
+      } else if (!response.ok) {
+        throw new Error(`Máy chủ báo lỗi ${response.status}: ${response.statusText || 'Không xác định'}`);
+      } else {
+        try {
+          res = JSON.parse(rawText);
+        } catch (_) {
+          throw new Error('Phản hồi từ máy chủ không hợp lệ.');
+        }
+      }
+    }
+
     if (res && res.success) {
       showToast('Đã đăng khoảnh khắc lên Locket thành công! 🎉', 'success');
       selectedFile = null;
@@ -1632,7 +1670,19 @@ async function uploadNewAvatar(files) {
     body: formData
   });
 
-  const res = await response.json();
+  let res = null;
+  const contentType = response.headers.get('content-type') || '';
+  if (contentType.includes('application/json')) {
+    res = await response.json();
+  } else {
+    const rawText = await response.text();
+    try {
+      res = JSON.parse(rawText);
+    } catch (_) {
+      res = { success: false, msg: `Lỗi máy chủ (${response.status})` };
+    }
+  }
+
   if (res && res.success) {
     showToast('Đã đổi avatar Locket thành công!', 'success');
     await loadActiveAccount();
