@@ -546,10 +546,10 @@ function renderMomentCard(moment) {
     <div id="moment-card-${momentId}" data-moment-id="${momentId}" class="glass-panel rounded-3xl overflow-hidden border border-white/[0.08] hover:border-amber-500/30 transition-all duration-300 flex flex-col shadow-lg">
       <!-- Card Header -->
       <div class="p-3.5 flex items-center justify-between border-b border-white/[0.06]">
-        <div class="flex items-center gap-2.5 min-w-0">
-          <img src="${authorAvatar}" class="w-8 h-8 rounded-full object-cover border border-amber-500/40 flex-shrink-0" onerror="this.src=DEFAULT_AVATAR">
+        <div onclick="openUserProfile('${moment.user || moment.user_uid || moment.author_uid || moment.username || ''}')" class="flex items-center gap-2.5 min-w-0 cursor-pointer group/author" title="Nhấn để xem hồ sơ Discord">
+          <img src="${authorAvatar}" class="w-8 h-8 rounded-full object-cover border border-amber-500/40 group-hover/author:border-amber-400 group-hover/author:scale-105 transition flex-shrink-0" onerror="this.src=DEFAULT_AVATAR">
           <div class="min-w-0">
-            <h4 class="text-xs font-bold text-white leading-tight truncate">${escapeHtml(authorName)}</h4>
+            <h4 class="text-xs font-bold text-white group-hover/author:text-amber-400 transition leading-tight truncate">${escapeHtml(authorName)}</h4>
             <p class="text-[10px] text-gray-400 font-mono leading-tight">${timeStr}</p>
           </div>
         </div>
@@ -676,8 +676,8 @@ async function viewMomentViews(momentUid) {
     <div class="py-2 text-xs">
       <p class="font-bold text-amber-400 mb-2">Tổng lượt xem: ${res.data.count || viewers.length}</p>
       ${viewers.map(v => `
-        <div class="py-1.5 flex items-center justify-between text-gray-300">
-          <span>UID: ${v.user_uid}</span>
+        <div onclick="openUserProfile('${v.user_uid}')" class="py-1.5 px-2 rounded-xl flex items-center justify-between text-gray-300 hover:text-white hover:bg-white/5 cursor-pointer transition group" title="Nhấn để xem hồ sơ">
+          <span class="font-mono group-hover:text-amber-400">UID: ${v.user_uid}</span>
           <span class="text-gray-500 text-[10px]">${new Date(v.viewed_at).toLocaleTimeString()}</span>
         </div>
       `).join('')}
@@ -1538,22 +1538,29 @@ async function loadFriends() {
   }
 
   container.innerHTML = friends.map(f => `
-    <div class="glass-panel p-4 rounded-3xl border border-white/[0.08] hover:border-amber-500/30 transition flex flex-col justify-between">
-      <div class="flex items-center gap-3 mb-3">
-        <img src="${f.profile_picture_url || '/images/locket.webp'}" class="w-12 h-12 rounded-full object-cover border border-amber-500/30">
-        <div class="truncate">
-          <h4 class="text-xs font-bold text-white truncate">${f.first_name ? `${f.first_name} ${f.last_name || ''}`.trim() : f.username}</h4>
+    <div class="glass-panel p-4 rounded-3xl border border-white/[0.08] hover:border-amber-500/30 transition flex flex-col justify-between group">
+      <div onclick="openUserProfile('${f.username || f.uid || f.id}')" class="flex items-center gap-3 mb-3 cursor-pointer" title="Nhấn để xem hồ sơ Discord">
+        <img src="${f.profile_picture_url || '/images/locket.webp'}" class="w-12 h-12 rounded-full object-cover border border-amber-500/30 group-hover:scale-105 group-hover:border-amber-400 transition shrink-0" onerror="this.src=DEFAULT_AVATAR">
+        <div class="truncate flex-1">
+          <h4 class="text-xs font-bold text-white truncate group-hover:text-amber-400 transition">${f.first_name ? `${f.first_name} ${f.last_name || ''}`.trim() : f.username}</h4>
           <p class="text-[11px] text-amber-400 font-mono truncate">@${f.username || 'user'}</p>
         </div>
+        <button type="button" class="p-1 rounded-lg text-gray-500 group-hover:text-amber-400 transition" title="Xem hồ sơ">
+          <i data-lucide="chevron-right" class="w-4 h-4"></i>
+        </button>
       </div>
 
-      <div class="grid grid-cols-2 gap-2 pt-2 border-t border-white/[0.06]">
-        <button onclick="viewFriendMoments('${f.uid || f.id}')" class="px-2 py-1.5 rounded-xl bg-obsidian-850 border border-white/10 hover:border-amber-400 text-[11px] font-semibold text-gray-300 hover:text-white flex items-center justify-center gap-1 transition">
-          <i data-lucide="image" class="w-3.5 h-3.5 text-amber-400"></i>
+      <div class="grid grid-cols-3 gap-1.5 pt-2 border-t border-white/[0.06]">
+        <button onclick="openUserProfile('${f.username || f.uid || f.id}')" class="px-2 py-1.5 rounded-xl bg-obsidian-850 border border-white/10 hover:border-amber-400 text-[10px] font-semibold text-gray-300 hover:text-white flex items-center justify-center gap-1 transition">
+          <i data-lucide="user" class="w-3 h-3 text-amber-400"></i>
+          <span>Hồ sơ</span>
+        </button>
+        <button onclick="viewFriendMoments('${f.uid || f.id}')" class="px-2 py-1.5 rounded-xl bg-obsidian-850 border border-white/10 hover:border-amber-400 text-[10px] font-semibold text-gray-300 hover:text-white flex items-center justify-center gap-1 transition">
+          <i data-lucide="image" class="w-3 h-3 text-amber-400"></i>
           <span>Moments</span>
         </button>
-        <button onclick="openChatWithAuthor('${f.uid || f.id}', '${f.first_name || f.username}', '${f.profile_picture_url || ''}', '${f.username || ''}')" class="px-2 py-1.5 rounded-xl bg-obsidian-850 border border-white/10 hover:border-amber-400 text-[11px] font-semibold text-gray-300 hover:text-white flex items-center justify-center gap-1 transition">
-          <i data-lucide="message-circle" class="w-3.5 h-3.5 text-amber-400"></i>
+        <button onclick="openChatWithAuthor('${f.uid || f.id}', '${f.first_name || f.username}', '${f.profile_picture_url || ''}', '${f.username || ''}')" class="px-2 py-1.5 rounded-xl bg-obsidian-850 border border-white/10 hover:border-amber-400 text-[10px] font-semibold text-gray-300 hover:text-white flex items-center justify-center gap-1 transition">
+          <i data-lucide="message-circle" class="w-3 h-3 text-amber-400"></i>
           <span>Chat</span>
         </button>
       </div>
@@ -2306,5 +2313,375 @@ function closeFriendMomentsModal() {
   if (modal) {
     modal.classList.add('hidden');
     modal.classList.remove('flex');
+  }
+}
+
+// ================= DISCORD-STYLE FULL USER PROFILE =================
+let currentProfileData = null;
+let profileHistory = [];
+
+function searchUserProfile() {
+  const input = document.getElementById('add-friend-input');
+  if (!input) return;
+  let val = input.value.trim();
+  if (!val) {
+    showToast('Vui lòng nhập Username hoặc link Locket để xem hồ sơ', 'warning');
+    return;
+  }
+  openUserProfile(val);
+}
+
+async function openUserProfile(identifier, pushHistory = true) {
+  if (!identifier) return;
+  const modal = document.getElementById('modal-user-profile');
+  if (!modal) return;
+
+  // Clean identifier
+  identifier = String(identifier).trim().replace(/^@/, '');
+  if (identifier.includes('locket.cam/')) {
+    const m = identifier.match(/locket\.cam\/([a-zA-Z0-9_.-]+)/);
+    if (m) identifier = m[1];
+  }
+
+  // Push to history if navigating from an already opened profile
+  if (pushHistory && currentProfileData && currentProfileData.profile) {
+    const curUid = currentProfileData.profile.uid;
+    const curUsername = currentProfileData.profile.username;
+    if (curUid !== identifier && curUsername !== identifier) {
+      profileHistory.push(currentProfileData);
+    }
+  }
+
+  // Update back button
+  updateProfileHistoryBackBtn();
+
+  // Show modal
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+
+  // Loading skeleton / placeholder
+  const displayNameEl = document.getElementById('uprofile-display-name');
+  const usernameEl = document.getElementById('uprofile-username');
+  const uidEl = document.getElementById('uprofile-uid');
+  const emailEl = document.getElementById('uprofile-email');
+  const phoneEl = document.getElementById('uprofile-phone');
+  const linkEl = document.getElementById('uprofile-link');
+  const friendsCountEl = document.getElementById('uprofile-friends-count');
+  const friendsListEl = document.getElementById('uprofile-friends-list');
+  const momentsGridEl = document.getElementById('uprofile-moments-grid');
+
+  if (displayNameEl) displayNameEl.textContent = 'Đang tải hồ sơ...';
+  if (usernameEl) usernameEl.textContent = `@${identifier}`;
+  if (uidEl) uidEl.textContent = '...';
+  if (emailEl) emailEl.textContent = '...';
+  if (phoneEl) phoneEl.textContent = '...';
+  if (linkEl) {
+    linkEl.textContent = '...';
+    linkEl.href = '#';
+  }
+  if (friendsCountEl) friendsCountEl.textContent = '...';
+  if (friendsListEl) {
+    friendsListEl.innerHTML = `
+      <div class="col-span-full py-8 text-center text-gray-500 text-xs flex flex-col items-center justify-center gap-2">
+        <div class="w-5 h-5 border-2 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+        <span>Đang nạp danh sách bạn bè...</span>
+      </div>
+    `;
+  }
+  if (momentsGridEl) {
+    momentsGridEl.innerHTML = `
+      <div class="col-span-full py-4 text-center text-gray-500 text-xs">Đang tải khoảnh khắc...</div>
+    `;
+  }
+
+  try {
+    const res = await apiFetch(`/api/locket/friends/profile/${encodeURIComponent(identifier)}`);
+    if (!res || !res.success || !res.data) {
+      throw new Error((res && res.msg) || 'Không thể tìm thấy thông tin người dùng này trên Locket.');
+    }
+
+    const { profile, friends, friendsCount, mutualFriends, recentMoments } = res.data;
+    currentProfileData = res.data;
+
+    // 1. Header & Avatar
+    const avatarEl = document.getElementById('uprofile-avatar');
+    if (avatarEl) avatarEl.src = profile.profile_picture_url || DEFAULT_AVATAR;
+
+    // 2. Names
+    if (displayNameEl) displayNameEl.textContent = profile.display_name || profile.username || 'Người dùng Locket';
+    if (usernameEl) usernameEl.textContent = profile.username ? `@${profile.username}` : (profile.uid ? `@${profile.uid.substring(0, 8)}...` : '');
+
+    // 3. Status text
+    const statusTextEl = document.getElementById('uprofile-status-text');
+    if (statusTextEl) {
+      if (profile.relationship === 'self') {
+        statusTextEl.textContent = 'Tài khoản của bạn (Đang hoạt động)';
+      } else if (profile.relationship === 'friend') {
+        statusTextEl.textContent = 'Bạn bè trên Locket';
+      } else {
+        statusTextEl.textContent = 'Người dùng Locket (Chưa kết bạn)';
+      }
+    }
+
+    // 4. Badges
+    const badgeContainer = document.getElementById('uprofile-badges');
+    if (badgeContainer) {
+      let badgesHtml = '';
+      if (profile.celebrity || profile.badge === 'celebrity') {
+        badgesHtml += `<span class="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[10px] font-bold flex items-center gap-1">⭐ Celebrity</span>`;
+      }
+      if (profile.is_local_account) {
+        badgesHtml += `<span class="px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[10px] font-bold flex items-center gap-1">🛡️ Tài khoản Pro</span>`;
+      }
+      if (profile.relationship === 'self') {
+        badgesHtml += `<span class="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 text-[10px] font-bold">Bạn</span>`;
+      } else if (profile.relationship === 'friend') {
+        badgesHtml += `<span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold">✓ Bạn bè</span>`;
+      }
+      badgeContainer.innerHTML = badgesHtml;
+    }
+
+    // 5. Action Buttons
+    const btnChat = document.getElementById('btn-uprofile-chat');
+    const btnMoments = document.getElementById('btn-uprofile-view-moments');
+    const btnAdd = document.getElementById('btn-uprofile-add');
+    const btnUnfriend = document.getElementById('btn-uprofile-unfriend');
+
+    if (btnChat) {
+      if (profile.relationship === 'self') {
+        btnChat.classList.add('hidden');
+      } else {
+        btnChat.classList.remove('hidden');
+        btnChat.onclick = () => openChatFromProfile(profile.uid, profile.username, profile.display_name, profile.profile_picture_url);
+      }
+    }
+
+    if (btnMoments) {
+      if (profile.relationship === 'friend' || profile.relationship === 'self') {
+        btnMoments.classList.remove('hidden');
+        btnMoments.onclick = () => {
+          closeUserProfileModal();
+          viewFriendMoments(profile.uid);
+        };
+      } else {
+        btnMoments.classList.add('hidden');
+      }
+    }
+
+    if (btnAdd) {
+      if (profile.relationship === 'none') {
+        btnAdd.classList.remove('hidden');
+        btnAdd.onclick = () => sendFriendRequestFromProfile(profile.username || profile.uid);
+      } else {
+        btnAdd.classList.add('hidden');
+      }
+    }
+
+    if (btnUnfriend) {
+      if (profile.relationship === 'friend') {
+        btnUnfriend.classList.remove('hidden');
+        btnUnfriend.onclick = () => unfriendFromProfile(profile.uid, profile.display_name || profile.username);
+      } else {
+        btnUnfriend.classList.add('hidden');
+      }
+    }
+
+    // 6. Detailed Fields
+    if (uidEl) uidEl.textContent = profile.uid || '-';
+    if (emailEl) emailEl.textContent = profile.email || 'Ẩn theo chính sách bảo mật Locket';
+    if (phoneEl) phoneEl.textContent = profile.phone_number || 'Chưa công khai';
+
+    if (linkEl) {
+      linkEl.textContent = profile.invite_link || '-';
+      linkEl.href = profile.invite_link || '#';
+    }
+
+    const deviceRow = document.getElementById('uprofile-device-row');
+    const deviceEl = document.getElementById('uprofile-device');
+    if (deviceRow && deviceEl) {
+      if (profile.device_model || profile.ios_version) {
+        deviceRow.classList.remove('hidden');
+        deviceEl.textContent = `${profile.device_model || 'Thiết bị Apple'} (${profile.ios_version || 'iOS'})`;
+      } else {
+        deviceEl.textContent = 'Ứng dụng Locket Camera';
+      }
+    }
+
+    // 7. Friends List
+    if (friendsCountEl) friendsCountEl.textContent = friendsCount || 0;
+
+    if (friendsListEl) {
+      if (friends && friends.length > 0) {
+        friendsListEl.innerHTML = friends.map(f => {
+          const friendName = (f.first_name ? `${f.first_name} ${f.last_name || ''}`.trim() : (f.username || f.uid));
+          const friendSub = f.username ? `@${f.username}` : (f.uid ? `${f.uid.substring(0, 10)}...` : '');
+          const friendAvatar = f.profile_picture_url || DEFAULT_AVATAR;
+          const friendId = f.username || f.uid;
+          return `
+            <div onclick="openUserProfile('${friendId}')" class="p-2 rounded-xl bg-black/40 hover:bg-white/10 border border-white/5 hover:border-amber-400/40 cursor-pointer flex items-center justify-between gap-2.5 transition group" title="Nhấn để xem hồ sơ @${f.username || f.uid}">
+              <div class="flex items-center gap-2.5 min-w-0">
+                <img src="${friendAvatar}" alt="${escapeHtml(friendName)}" class="w-8 h-8 rounded-full object-cover border border-white/10 group-hover:border-amber-400/50 transition shrink-0" onerror="this.src=DEFAULT_AVATAR">
+                <div class="min-w-0">
+                  <p class="text-xs font-semibold text-white group-hover:text-amber-400 truncate transition">${escapeHtml(friendName)}</p>
+                  <p class="text-[10px] text-gray-400 font-mono truncate">${escapeHtml(friendSub)}</p>
+                </div>
+              </div>
+              <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-gray-500 group-hover:text-amber-400 group-hover:translate-x-0.5 transition shrink-0"></i>
+            </div>
+          `;
+        }).join('');
+      } else {
+        friendsListEl.innerHTML = `
+          <div class="col-span-full py-4 text-center text-gray-500 text-xs">
+            ${profile.celebrity ? 'Tài khoản nổi tiếng đã đạt giới hạn bạn bè tối đa (3000).' : 'Danh sách bạn bè riêng tư hoặc tài khoản chưa công khai.'}
+          </div>
+        `;
+      }
+    }
+
+    // 8. Recent Moments
+    const momentsCountEl = document.getElementById('uprofile-moments-count');
+    if (momentsCountEl) momentsCountEl.textContent = recentMoments ? recentMoments.length : 0;
+
+    const viewAllMomentsBtn = document.getElementById('btn-uprofile-view-all-moments');
+
+    if (momentsGridEl) {
+      if (recentMoments && recentMoments.length > 0) {
+        if (viewAllMomentsBtn) {
+          viewAllMomentsBtn.classList.remove('hidden');
+          viewAllMomentsBtn.onclick = () => {
+            closeUserProfileModal();
+            viewFriendMoments(profile.uid);
+          };
+        }
+        momentsGridEl.innerHTML = recentMoments.map(m => `
+          <div class="relative aspect-square rounded-xl overflow-hidden group border border-white/10 bg-black cursor-pointer hover:border-amber-400/50 transition" onclick="closeUserProfileModal(); viewFriendMoments('${profile.uid}')">
+            <img src="${m.thumbnail_url}" alt="Moment" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+            ${m.video_url ? '<div class="absolute top-1.5 right-1.5 p-1 rounded-full bg-black/60 text-white"><i data-lucide="play" class="w-2.5 h-2.5 fill-white"></i></div>' : ''}
+            ${m.caption ? `<div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-1.5 text-[10px] text-white truncate font-medium">${escapeHtml(m.caption)}</div>` : ''}
+          </div>
+        `).join('');
+      } else {
+        if (viewAllMomentsBtn) viewAllMomentsBtn.classList.add('hidden');
+        momentsGridEl.innerHTML = `
+          <div class="col-span-full py-4 text-center text-gray-500 text-xs">
+            ${profile.relationship === 'friend' || profile.relationship === 'self' ? 'Chưa có khoảnh khắc nào gần đây' : 'Chỉ bạn bè mới có thể xem khoảnh khắc'}
+          </div>
+        `;
+      }
+    }
+
+    lucide.createIcons();
+  } catch (err) {
+    console.error('Lỗi nạp profile:', err);
+    showToast(err.message || 'Không thể tải hồ sơ người dùng', 'error');
+    if (displayNameEl) displayNameEl.textContent = 'Không tìm thấy hồ sơ';
+    if (usernameEl) usernameEl.textContent = `@${identifier}`;
+    if (friendsListEl) {
+      friendsListEl.innerHTML = `<div class="col-span-full py-4 text-center text-rose-400 text-xs">${escapeHtml(err.message || 'Lỗi khi tải hồ sơ')}</div>`;
+    }
+  }
+}
+
+function updateProfileHistoryBackBtn() {
+  const btnBack = document.getElementById('btn-profile-history-back');
+  const countSpan = document.getElementById('uprofile-history-count');
+  if (!btnBack) return;
+  if (profileHistory.length > 0) {
+    btnBack.classList.remove('hidden');
+    if (countSpan) countSpan.textContent = profileHistory.length;
+  } else {
+    btnBack.classList.add('hidden');
+  }
+}
+
+function historyBackUserProfile() {
+  if (profileHistory.length === 0) return;
+  const prev = profileHistory.pop();
+  if (prev && prev.profile) {
+    openUserProfile(prev.profile.uid || prev.profile.username, false);
+  }
+}
+
+function closeUserProfileModal() {
+  const modal = document.getElementById('modal-user-profile');
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  }
+  profileHistory = [];
+  currentProfileData = null;
+  updateProfileHistoryBackBtn();
+}
+
+function copyUserProfileUsername() {
+  if (!currentProfileData || !currentProfileData.profile) return;
+  const username = currentProfileData.profile.username || currentProfileData.profile.uid;
+  navigator.clipboard.writeText(username).then(() => {
+    showToast(`Đã sao chép: @${username} 📋`, 'success');
+  });
+}
+
+function copyUserProfileUid() {
+  if (!currentProfileData || !currentProfileData.profile) return;
+  const uid = currentProfileData.profile.uid;
+  navigator.clipboard.writeText(uid).then(() => {
+    showToast(`Đã sao chép UID: ${uid} 📋`, 'success');
+  });
+}
+
+function copyUserProfileLink() {
+  if (!currentProfileData || !currentProfileData.profile) return;
+  const link = currentProfileData.profile.invite_link;
+  if (!link) {
+    showToast('Người dùng chưa có link Locket công khai', 'info');
+    return;
+  }
+  navigator.clipboard.writeText(link).then(() => {
+    showToast(`Đã sao chép link Locket: ${link} 📋`, 'success');
+  });
+}
+
+function openChatFromProfile(peerUid, username, displayName, avatar) {
+  closeUserProfileModal();
+  openChatWithAuthor(peerUid, displayName, avatar, username);
+}
+
+async function sendFriendRequestFromProfile(usernameOrUid) {
+  showToast('Đang gửi lời mời kết bạn...', 'info');
+  try {
+    const res = await apiFetch('/api/locket/friends/request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: usernameOrUid })
+    });
+    if (res && res.success) {
+      showToast('Đã gửi lời mời kết bạn thành công! 🎉', 'success');
+      openUserProfile(usernameOrUid, false);
+    } else {
+      showToast(res.msg || 'Không thể gửi kết bạn', 'error');
+    }
+  } catch (e) {
+    showToast(e.message || 'Lỗi gửi kết bạn', 'error');
+  }
+}
+
+async function unfriendFromProfile(targetUid, name) {
+  if (!confirm(`Bạn có chắc muốn hủy kết bạn với ${name}?`)) return;
+  try {
+    const res = await apiFetch('/api/locket/friends/remove', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userUid: targetUid })
+    });
+    if (res && res.success) {
+      showToast(`Đã hủy kết bạn với ${name}`, 'success');
+      await loadFriends();
+      openUserProfile(targetUid, false);
+    } else {
+      showToast(res.msg || 'Không thể hủy kết bạn', 'error');
+    }
+  } catch (e) {
+    showToast(e.message || 'Lỗi hủy kết bạn', 'error');
   }
 }

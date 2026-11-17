@@ -2,6 +2,10 @@ const express = require('express');
 const router = express.Router();
 const { requireAuth } = require('../middleware/auth');
 const locketManager = require('../services/locketService');
+const prisma = require('../db/prisma');
+
+// Bộ nhớ đệm danh sách bạn bè đã biết của các user
+const userFriendsCache = new Map();
 
 // 1. Lấy danh sách tất cả bạn bè
 router.get('/', requireAuth, async (req, res) => {
@@ -297,6 +301,224 @@ router.post('/unblock', requireAuth, async (req, res) => {
   } catch (err) {
     const code = err.statusCode || 400;
     res.status(code).json({ code, success: false, msg: err.message });
+  }
+});
+
+// 9. Lấy full thông tin profile người dùng (Discord style)
+router.get('/profile/:identifier', requireAuth, async (req, res) => {
+  try {
+    const { client, account: activeAccount } = await locketManager.getActiveClientForUser(req.user.id);
+    const myUid = client.session.uid;
+    let identifier = req.params.identifier.trim().replace(/^@/, '');
+
+    if (identifier.includes('locket.cam/')) {
+      const match = identifier.match(/locket\.cam\/([a-zA-Z0-9_.-]+)/);
+      if (match) identifier = match[1];
+    }
+
+    // Nạp danh sách bạn bè của tài khoản hiện tại trước để đối chiếu
+    let myFriends = [];
+    try {
+      myFriends = await client.friends.getAllFriends();
+      if (myUid) userFriendsCache.set(myUid, myFriends);
+    } catch (_) {}
+
+    // 1. Kiểm tra xem identifier có phải là một tài khoản trong database LocketAccount không
+    const dbAccount = await prisma.locketAccount.findFirst({
+      where: {
+        OR: [
+          { locket_uid: identifier },
+          { username: { equals: identifier, mode: 'insensitive' } },
+          { email: { equals: identifier, mode: 'insensitive' } }
+        ]
+      }
+    });
+
+    let targetUid = null;
+    let targetUsername = null;
+    let baseProfile = null;
+    let inviteToken = null;
+
+    if (dbAccount) {
+      targetUid = dbAccount.locket_uid;
+      targetUsername = dbAccount.username;
+      baseProfile = {
+        uid: dbAccount.locket_uid,
+        username: dbAccount.username,
+        first_name: dbAccount.first_name,
+        last_name: dbAccount.last_name,
+        profile_picture_url: dbAccount.avatar_url,
+        email: dbAccount.email,
+        phone_number: null,
+        device_model: dbAccount.device_model,
+        ios_version: dbAccount.ios_version,
+        is_local_account: true,
+        created_at: dbAccount.created_at
+      };
+    }
+
+    // 2. Kiểm tra nếu identifier trùng với một người trong danh sách bạn bè của tôi
+    if (!targetUid && myFriends.length > 0) {
+      const matchedFriend = myFriends.find(f => f.uid === identifier || (f.username && f.username.toLowerCase() === identifier.toLowerCase()));
+      if (matchedFriend) {
+        targetUid = matchedFriend.uid;
+        targetUsername = matchedFriend.username;
+        baseProfile = { ...matchedFriend };
+      }
+    }
+
+    // 3. Kiểm tra trong bộ nhớ đệm bạn bè của các tài khoản khác
+    if (!targetUid) {
+      for (const [cUid, fList] of userFriendsCache.entries()) {
+        const found = fList.find(f => f.uid === identifier || (f.username && f.username.toLowerCase() === identifier.toLowerCase()));
+        if (found) {
+          targetUid = found.uid;
+          targetUsername = found.username;
+          baseProfile = { ...found };
+          break;
+        }
+      }
+    }
+
+    // 4. Nếu chưa có UID (hoặc identifier là username), tra cứu qua Locket API
+    if (!targetUid) {
+      // Nếu có định dạng Firebase UID (28 ký tự gồm chữ và số)
+      if (identifier.length === 28 && /^[a-zA-Z0-9]+$/.test(identifier) && !/^[a-zA-Z]+$/.test(identifier)) {
+        targetUid = identifier;
+      } else {
+        // Là username: resolve invite token
+        targetUsername = identifier;
+        try {
+          inviteToken = await client.friends.resolveInviteTokenFromUsername(targetUsername);
+          if (inviteToken) {
+            const userInvite = await client.friends.fetchUserByInviteToken(inviteToken);
+            if (userInvite && userInvite.user) {
+              baseProfile = { ...userInvite.user, celebrity_data: userInvite.celebrity_data };
+              targetUid = baseProfile.uid;
+              targetUsername = baseProfile.username || targetUsername;
+            }
+          }
+        } catch (e) {
+          console.warn('Lỗi resolve invite token:', e.message);
+        }
+      }
+    }
+
+    // 5. Lấy thông tin chi tiết qua fetchUserV2 nếu có UID
+    let locketProfile = null;
+    if (targetUid) {
+      try {
+        const v2Res = await client.postApi('fetchUserV2', { user_uid: targetUid });
+        if (v2Res && v2Res.data) {
+          locketProfile = v2Res.data;
+          if (!targetUsername && locketProfile.username) targetUsername = locketProfile.username;
+        }
+      } catch (e) {
+        console.warn('Lỗi fetchUserV2:', e.message);
+      }
+    }
+
+    // Nếu vẫn chưa có targetUid và baseProfile, thử tra cứu lại qua invite token nếu identifier chưa thử
+    if (!targetUid && !baseProfile && identifier) {
+      try {
+        inviteToken = await client.friends.resolveInviteTokenFromUsername(identifier);
+        if (inviteToken) {
+          const userInvite = await client.friends.fetchUserByInviteToken(inviteToken);
+          if (userInvite && userInvite.user) {
+            baseProfile = { ...userInvite.user, celebrity_data: userInvite.celebrity_data };
+            targetUid = baseProfile.uid;
+            targetUsername = baseProfile.username || identifier;
+          }
+        }
+      } catch (_) {}
+    }
+
+    // Tổng hợp profile
+    const profile = {
+      uid: targetUid || identifier,
+      username: (locketProfile && locketProfile.username) || (baseProfile && baseProfile.username) || targetUsername || identifier,
+      first_name: (locketProfile && locketProfile.first_name) || (baseProfile && baseProfile.first_name) || '',
+      last_name: (locketProfile && locketProfile.last_name) || (baseProfile && baseProfile.last_name) || '',
+      profile_picture_url: (locketProfile && locketProfile.profile_picture_url) || (baseProfile && baseProfile.profile_picture_url) || null,
+      badge: (locketProfile && locketProfile.badge) || (baseProfile && baseProfile.badge) || (locketProfile && locketProfile.celebrity ? 'celebrity' : null),
+      celebrity: Boolean((locketProfile && locketProfile.celebrity) || (baseProfile && baseProfile.celebrity)),
+      email: (baseProfile && baseProfile.email) || null,
+      phone_number: (baseProfile && baseProfile.phone_number) || null,
+      device_model: (baseProfile && baseProfile.device_model) || (locketProfile && locketProfile.device_model) || null,
+      ios_version: (baseProfile && baseProfile.ios_version) || (locketProfile && locketProfile.ios_version) || null,
+      is_local_account: Boolean(dbAccount)
+    };
+
+    profile.display_name = profile.first_name ? `${profile.first_name} ${profile.last_name || ''}`.trim() : (profile.username || 'Người dùng Locket');
+    profile.invite_link = profile.username ? `https://locket.cam/${profile.username}` : '';
+
+    // 6. Kiểm tra mối quan hệ bạn bè với tài khoản active
+    const isMe = (profile.uid === myUid) || (activeAccount.username && profile.username && activeAccount.username.toLowerCase() === profile.username.toLowerCase());
+    const isFriend = myFriends.some(f => f.uid === profile.uid || (f.username && profile.username && f.username.toLowerCase() === profile.username.toLowerCase()));
+
+    profile.relationship = isMe ? 'self' : (isFriend ? 'friend' : 'none');
+
+    // 7. Lấy danh sách bạn bè của user này:
+    let userFriends = [];
+    let declaredFriendsCount = null;
+
+    if (dbAccount) {
+      try {
+        const targetClient = await locketManager.getClient(dbAccount);
+        userFriends = await targetClient.friends.getAllFriends();
+        if (dbAccount.locket_uid) userFriendsCache.set(dbAccount.locket_uid, userFriends);
+        declaredFriendsCount = userFriends.length;
+      } catch (e) {
+        console.warn('Không thể nạp bạn bè cho targetClient dbAccount:', e.message);
+      }
+    } else if (isMe) {
+      userFriends = myFriends;
+      declaredFriendsCount = myFriends.length;
+    } else if (userFriendsCache.has(profile.uid)) {
+      userFriends = userFriendsCache.get(profile.uid) || [];
+      declaredFriendsCount = userFriends.length;
+    } else if (baseProfile && baseProfile.celebrity_data && baseProfile.celebrity_data.friend_count) {
+      declaredFriendsCount = baseProfile.celebrity_data.friend_count;
+    } else if (locketProfile && locketProfile.celebrity_data && locketProfile.celebrity_data.friend_count) {
+      declaredFriendsCount = locketProfile.celebrity_data.friend_count;
+    }
+
+    // 8. Tính bạn chung (mutual friends)
+    let mutualFriends = [];
+    if (!isMe && myFriends.length > 0 && userFriends.length > 0) {
+      const myFriendUids = new Set(myFriends.map(f => f.uid));
+      mutualFriends = userFriends.filter(f => myFriendUids.has(f.uid));
+    }
+
+    // 9. Lấy moments gần đây của người dùng này (nếu đã là bạn bè hoặc là chính mình)
+    let recentMoments = [];
+    if (isFriend || isMe) {
+      try {
+        const feedRes = await client.postApi('getLatestMomentV2', isMe ? { should_count_missed_moments: false } : { friend_uid: profile.uid });
+        recentMoments = (feedRes.data || []).slice(0, 12).map(m => ({
+          canonical_uid: m.canonical_uid,
+          thumbnail_url: m.thumbnail_url,
+          video_url: m.video_url || null,
+          caption: m.caption || '',
+          date: m.date
+        }));
+      } catch (_) {}
+    }
+
+    res.json({
+      code: 200,
+      success: true,
+      data: {
+        profile,
+        friends: userFriends || [],
+        friendsCount: declaredFriendsCount !== null ? declaredFriendsCount : (userFriends || []).length,
+        mutualFriends: mutualFriends || [],
+        recentMoments: recentMoments || []
+      }
+    });
+  } catch (err) {
+    console.error('Lỗi lấy profile Discord style:', err);
+    res.status(400).json({ code: 400, success: false, msg: err.message });
   }
 });
 
