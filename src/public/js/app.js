@@ -19,6 +19,14 @@ let isSilentRefreshing = false;
 let activeTab = 'feed';
 let socket = null;
 let currentFacingMode = 'user';
+let webcamMode = 'photo'; // 'photo' | 'video'
+let mediaRecorder = null;
+let recordedChunks = [];
+let recordingTimer = null;
+let recordingSeconds = 0;
+const MAX_RECORDING_SECONDS = 30;
+let recordedVideoBlob = null;
+let currentMyInviteLink = '';
 let cachedAudienceFriends = [];
 let selectedSpotifyTrack = null;
 
@@ -975,32 +983,81 @@ function handleFileSelected(files) {
   }
 }
 
+function setWebcamMode(mode) {
+  if (webcamMode === mode) return;
+  webcamMode = mode;
+
+  const btnPhoto = document.getElementById('webcam-mode-photo');
+  const btnVideo = document.getElementById('webcam-mode-video');
+  const snapBtn = document.getElementById('btn-webcam-photo-snap');
+  const recordBtn = document.getElementById('btn-webcam-video-record');
+  const hint = document.getElementById('webcam-mode-hint');
+
+  // Dừng quay nếu đang dở dang
+  if (mediaRecorder && mediaRecorder.state === 'recording') {
+    stopWebcamRecording(false);
+  }
+  retakeWebcamRecording();
+
+  if (mode === 'photo') {
+    if (btnPhoto) btnPhoto.className = "px-4 py-1.5 rounded-lg text-xs font-bold bg-amber-500 text-black flex items-center gap-1.5 transition";
+    if (btnVideo) btnVideo.className = "px-4 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white flex items-center gap-1.5 transition";
+    if (snapBtn) snapBtn.classList.remove('hidden');
+    if (recordBtn) recordBtn.classList.add('hidden');
+    if (hint) hint.textContent = 'Nhấn Chụp Ngay để chụp ảnh tức thì từ Webcam';
+  } else {
+    if (btnVideo) btnVideo.className = "px-4 py-1.5 rounded-lg text-xs font-bold bg-amber-500 text-black flex items-center gap-1.5 transition";
+    if (btnPhoto) btnPhoto.className = "px-4 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white flex items-center gap-1.5 transition";
+    if (snapBtn) snapBtn.classList.add('hidden');
+    if (recordBtn) recordBtn.classList.remove('hidden');
+    if (hint) hint.textContent = 'Nhấn Bắt đầu quay để quay clip ngắn (tối đa 30s) kèm âm thanh';
+    
+    // Yêu cầu nạp micro nếu luồng hiện tại chưa có track audio
+    if (webcamStream && webcamStream.getAudioTracks().length === 0) {
+      startWebcam();
+    }
+  }
+  lucide.createIcons();
+}
+
 async function startWebcam() {
   stopWebcam();
   const video = document.getElementById('webcam-video');
+  const needAudio = (webcamMode === 'video');
+
+  const videoConstraints = {
+    width: { ideal: 1080 },
+    height: { ideal: 1080 },
+    facingMode: currentFacingMode
+  };
+
   try {
-    const constraints = {
-      video: {
-        width: { ideal: 1080 },
-        height: { ideal: 1080 },
-        facingMode: currentFacingMode
-      }
-    };
-    webcamStream = await navigator.mediaDevices.getUserMedia(constraints);
+    webcamStream = await navigator.mediaDevices.getUserMedia({
+      video: videoConstraints,
+      audio: needAudio
+    });
     if (video) {
       video.srcObject = webcamStream;
       video.style.transform = currentFacingMode === 'user' ? 'scaleX(-1)' : 'scaleX(1)';
     }
   } catch (err) {
-    console.warn('getUserMedia facingMode error, fallback to default video device:', err.message);
+    console.warn('getUserMedia with facingMode & audio failed, trying fallbacks:', err.message);
     try {
-      webcamStream = await navigator.mediaDevices.getUserMedia({ video: true });
+      webcamStream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints, audio: false });
       if (video) {
         video.srcObject = webcamStream;
-        video.style.transform = 'none';
+        video.style.transform = currentFacingMode === 'user' ? 'scaleX(-1)' : 'scaleX(1)';
       }
     } catch (e2) {
-      showToast('Không thể mở camera webcam: ' + e2.message, 'error');
+      try {
+        webcamStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        if (video) {
+          video.srcObject = webcamStream;
+          video.style.transform = 'none';
+        }
+      } catch (e3) {
+        showToast('Không thể mở camera webcam: ' + e3.message, 'error');
+      }
     }
   }
 }
@@ -1012,6 +1069,13 @@ async function flipWebcam() {
 }
 
 function stopWebcam() {
+  if (recordingTimer) {
+    clearInterval(recordingTimer);
+    recordingTimer = null;
+  }
+  if (mediaRecorder && mediaRecorder.state === 'recording') {
+    try { mediaRecorder.stop(); } catch (_) {}
+  }
   if (webcamStream) {
     webcamStream.getTracks().forEach(track => track.stop());
     webcamStream = null;
@@ -1042,10 +1106,12 @@ function captureWebcamSnapshot() {
   const liveVideo = document.getElementById('live-preview-video');
   const defaultOverlay = document.getElementById('live-preview-default-overlay');
   if (defaultOverlay) defaultOverlay.classList.add('hidden');
-  liveVideo.classList.add('hidden');
-  liveImg.classList.remove('hidden');
-  liveImg.src = base64;
-  liveImg.classList.remove('opacity-60');
+  if (liveVideo) liveVideo.classList.add('hidden');
+  if (liveImg) {
+    liveImg.classList.remove('hidden');
+    liveImg.src = base64;
+    liveImg.classList.remove('opacity-60');
+  }
 
   window.capturedWebcamBase64 = base64;
   selectedFile = null;
@@ -1057,6 +1123,198 @@ function captureWebcamSnapshot() {
   showToast('Đã chụp ảnh webcam thành công!', 'success');
 }
 const captureWebcam = captureWebcamSnapshot;
+
+// Video Recording Methods
+function toggleWebcamRecording() {
+  if (mediaRecorder && mediaRecorder.state === 'recording') {
+    stopWebcamRecording(true);
+  } else {
+    startWebcamRecording();
+  }
+}
+
+function startWebcamRecording() {
+  if (!webcamStream) {
+    showToast('Camera chưa sẵn sàng!', 'error');
+    return;
+  }
+
+  let mimeType = 'video/webm;codecs=vp8,opus';
+  if (window.MediaRecorder) {
+    if (MediaRecorder.isTypeSupported('video/mp4;codecs=avc1,mp4a.40.2')) {
+      mimeType = 'video/mp4;codecs=avc1,mp4a.40.2';
+    } else if (MediaRecorder.isTypeSupported('video/mp4')) {
+      mimeType = 'video/mp4';
+    } else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')) {
+      mimeType = 'video/webm;codecs=vp9,opus';
+    } else if (MediaRecorder.isTypeSupported('video/webm')) {
+      mimeType = 'video/webm';
+    }
+  }
+
+  try {
+    recordedChunks = [];
+    mediaRecorder = new MediaRecorder(webcamStream, { mimeType });
+  } catch (err) {
+    try {
+      mediaRecorder = new MediaRecorder(webcamStream);
+    } catch (e2) {
+      showToast('Trình duyệt không hỗ trợ quay video từ webcam: ' + e2.message, 'error');
+      return;
+    }
+  }
+
+  mediaRecorder.ondataavailable = (e) => {
+    if (e.data && e.data.size > 0) {
+      recordedChunks.push(e.data);
+    }
+  };
+
+  mediaRecorder.onstop = () => {
+    handleRecordingFinished();
+  };
+
+  mediaRecorder.start(100);
+  recordingSeconds = 0;
+
+  // Update UI to recording state
+  const statusBadge = document.getElementById('webcam-record-status');
+  const timerText = document.getElementById('webcam-record-timer');
+  const progressBar = document.getElementById('webcam-record-progress');
+  const recordBtnText = document.getElementById('btn-webcam-record-text');
+  const recordIcon = document.getElementById('webcam-record-icon');
+
+  if (statusBadge) statusBadge.classList.remove('hidden');
+  if (progressBar) {
+    progressBar.classList.remove('hidden');
+    progressBar.style.width = '0%';
+  }
+  if (recordBtnText) recordBtnText.textContent = 'Dừng quay (00:00)';
+  if (recordIcon) {
+    recordIcon.className = 'w-3 h-3 rounded-sm bg-white animate-pulse';
+  }
+
+  if (recordingTimer) clearInterval(recordingTimer);
+  recordingTimer = setInterval(() => {
+    recordingSeconds++;
+    const min = Math.floor(recordingSeconds / 60);
+    const sec = recordingSeconds % 60;
+    const formatted = `${min < 10 ? '0' + min : min}:${sec < 10 ? '0' + sec : sec}`;
+    
+    if (timerText) timerText.textContent = `${formatted} / 00:30`;
+    if (recordBtnText) recordBtnText.textContent = `Dừng quay (${formatted})`;
+    if (progressBar) {
+      const pct = Math.min(100, (recordingSeconds / MAX_RECORDING_SECONDS) * 100);
+      progressBar.style.width = `${pct}%`;
+    }
+
+    if (recordingSeconds >= MAX_RECORDING_SECONDS) {
+      stopWebcamRecording(true);
+    }
+  }, 1000);
+}
+
+function stopWebcamRecording(shouldSave = true) {
+  if (recordingTimer) {
+    clearInterval(recordingTimer);
+    recordingTimer = null;
+  }
+
+  const statusBadge = document.getElementById('webcam-record-status');
+  const progressBar = document.getElementById('webcam-record-progress');
+  const recordBtnText = document.getElementById('btn-webcam-record-text');
+  const recordIcon = document.getElementById('webcam-record-icon');
+
+  if (statusBadge) statusBadge.classList.add('hidden');
+  if (progressBar) progressBar.classList.add('hidden');
+  if (recordBtnText) recordBtnText.textContent = 'Bắt đầu quay';
+  if (recordIcon) {
+    recordIcon.className = 'w-3 h-3 rounded-full bg-white animate-pulse';
+  }
+
+  if (mediaRecorder && mediaRecorder.state === 'recording') {
+    if (!shouldSave) {
+      mediaRecorder.ondataavailable = null;
+      mediaRecorder.onstop = null;
+    }
+    mediaRecorder.stop();
+  }
+}
+
+function handleRecordingFinished() {
+  if (!recordedChunks.length) {
+    showToast('Video không có dữ liệu, vui lòng thử lại.', 'error');
+    return;
+  }
+
+  const mime = (mediaRecorder && mediaRecorder.mimeType) ? mediaRecorder.mimeType : 'video/webm';
+  const blob = new Blob(recordedChunks, { type: mime });
+  recordedVideoBlob = blob;
+
+  // Show in viewfinder preview overlay
+  const previewOverlay = document.getElementById('webcam-recorded-preview-overlay');
+  const previewVideo = document.getElementById('webcam-recorded-video');
+  const liveControls = document.getElementById('webcam-live-controls');
+
+  if (previewVideo) {
+    previewVideo.src = URL.createObjectURL(blob);
+    previewVideo.play().catch(() => {});
+  }
+  if (previewOverlay) previewOverlay.classList.remove('hidden');
+  if (liveControls) liveControls.classList.add('hidden');
+
+  confirmWebcamRecording(false);
+}
+
+function retakeWebcamRecording() {
+  recordedVideoBlob = null;
+  const previewOverlay = document.getElementById('webcam-recorded-preview-overlay');
+  const previewVideo = document.getElementById('webcam-recorded-video');
+  const liveControls = document.getElementById('webcam-live-controls');
+
+  if (previewVideo) {
+    previewVideo.pause();
+    previewVideo.src = '';
+  }
+  if (previewOverlay) previewOverlay.classList.add('hidden');
+  if (liveControls) liveControls.classList.remove('hidden');
+}
+
+function confirmWebcamRecording(showSuccessToast = true) {
+  if (!recordedVideoBlob) return;
+
+  const ext = recordedVideoBlob.type.includes('mp4') ? 'mp4' : 'webm';
+  const file = new File([recordedVideoBlob], `webcam_moment_${Date.now()}.${ext}`, {
+    type: recordedVideoBlob.type || 'video/webm'
+  });
+
+  selectedFile = file;
+  window.capturedWebcamBase64 = null;
+
+  // Cập nhật Live Preview
+  const liveImg = document.getElementById('live-preview-img');
+  const liveVideo = document.getElementById('live-preview-video');
+  const defaultOverlay = document.getElementById('live-preview-default-overlay');
+
+  if (defaultOverlay) defaultOverlay.classList.add('hidden');
+  if (liveImg) liveImg.classList.add('hidden');
+  if (liveVideo) {
+    liveVideo.classList.remove('hidden');
+    liveVideo.src = URL.createObjectURL(recordedVideoBlob);
+    liveVideo.muted = true;
+    liveVideo.play().catch(() => {});
+  }
+
+  const label = document.getElementById('selected-file-label');
+  if (label) {
+    label.textContent = `✓ Đã quay video từ Webcam (${recordingSeconds}s). Sẵn sàng đăng!`;
+    label.classList.remove('hidden');
+  }
+
+  if (showSuccessToast) {
+    showToast(`Đã chọn video webcam (${recordingSeconds}s)! Bạn có thể chọn gradient pill và bấm Đăng Ngay. 🎉`, 'success');
+  }
+}
 
 // Audience & Specific Friends Selection
 async function handleAudienceChange(value) {
@@ -1265,6 +1523,12 @@ async function loadFriends() {
     return;
   }
 
+  if (res.myInviteLink) {
+    window.currentMyInviteLink = res.myInviteLink;
+    const linkDisplay = document.getElementById('my-invite-link-display');
+    if (linkDisplay) linkDisplay.textContent = res.myInviteLink;
+  }
+
   const friends = res.data;
   document.getElementById('friends-count').textContent = friends.length;
 
@@ -1278,7 +1542,7 @@ async function loadFriends() {
       <div class="flex items-center gap-3 mb-3">
         <img src="${f.profile_picture_url || '/images/locket.webp'}" class="w-12 h-12 rounded-full object-cover border border-amber-500/30">
         <div class="truncate">
-          <h4 class="text-xs font-bold text-white truncate">${f.first_name ? `${f.first_name} ${f.last_name || ''}` : f.username}</h4>
+          <h4 class="text-xs font-bold text-white truncate">${f.first_name ? `${f.first_name} ${f.last_name || ''}`.trim() : f.username}</h4>
           <p class="text-[11px] text-amber-400 font-mono truncate">@${f.username || 'user'}</p>
         </div>
       </div>
@@ -1300,24 +1564,120 @@ async function loadFriends() {
 
 async function sendFriendRequest() {
   const input = document.getElementById('add-friend-input');
+  const btn = document.getElementById('btn-send-friend');
   const val = input.value.trim();
   if (!val) {
     showToast('Vui lòng nhập Username hoặc dán link locket.cam/...', 'error');
     return;
   }
 
-  const res = await apiFetch('/api/locket/friends/request', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username: val })
-  });
-
-  if (res && res.success) {
-    showToast(res.msg, 'success');
-    input.value = '';
-  } else {
-    showToast(res ? res.msg : 'Gửi lời mời thất bại', 'error');
+  const originalHtml = btn ? btn.innerHTML : '';
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = `<div class="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div><span>Đang kiểm tra...</span>`;
   }
+
+  try {
+    const res = await apiFetch('/api/locket/friends/request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: val })
+    });
+
+    if (res && res.success) {
+      if (res.requireInviteLink) {
+        openFriendInviteModal(res);
+      } else if (res.alreadyFriends) {
+        showToast(res.msg || 'Hai bạn đã là bạn bè trên Locket!', 'info');
+      } else if (res.accepted) {
+        showToast(res.msg || 'Đã đồng ý kết bạn thành công!', 'success');
+        loadFriends();
+      } else {
+        showToast(res.msg || 'Đã gửi lời mời kết bạn thành công!', 'success');
+      }
+      input.value = '';
+    } else {
+      showToast(res ? res.msg : 'Gửi lời mời thất bại', 'error');
+    }
+  } catch (err) {
+    showToast('Lỗi khi gửi kết bạn: ' + err.message, 'error');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = originalHtml;
+      lucide.createIcons();
+    }
+  }
+}
+
+function openFriendInviteModal(data) {
+  const modal = document.getElementById('modal-friend-invite');
+  if (!modal) return;
+
+  const u = data.user || {};
+  const avatarEl = document.getElementById('invite-friend-avatar');
+  const nameEl = document.getElementById('invite-friend-name');
+  const userEl = document.getElementById('invite-friend-username');
+  const btnOpen = document.getElementById('btn-open-target-invite');
+  const btnOpenLabel = document.getElementById('btn-open-target-invite-label');
+
+  if (avatarEl) avatarEl.src = u.profile_picture_url || '/images/locket.webp';
+  if (nameEl) nameEl.textContent = u.display_name || (u.first_name ? `${u.first_name} ${u.last_name || ''}`.trim() : u.username) || 'Người dùng Locket';
+  if (userEl) userEl.textContent = `@${u.username || 'user'}`;
+  
+  const targetLink = data.targetInviteLink || `https://locket.cam/${u.username}`;
+  if (btnOpen) {
+    btnOpen.href = targetLink;
+    if (btnOpenLabel) btnOpenLabel.textContent = `Mở Locket để kết bạn (@${u.username || 'user'})`;
+  }
+
+  if (data.myInviteLink) {
+    window.currentMyInviteLink = data.myInviteLink;
+  }
+
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+  lucide.createIcons();
+}
+
+function closeFriendInviteModal() {
+  const modal = document.getElementById('modal-friend-invite');
+  if (!modal) return;
+  modal.classList.add('hidden');
+  modal.classList.remove('flex');
+}
+
+function copyMyInviteLinkFromCard() {
+  const linkDisplay = document.getElementById('my-invite-link-display');
+  const link = (linkDisplay && linkDisplay.textContent && !linkDisplay.textContent.includes('Đang tải')) ? linkDisplay.textContent : window.currentMyInviteLink;
+  if (!link || link.includes('...')) {
+    showToast('Đang tải link mời, vui lòng đợi giây lát...', 'info');
+    return;
+  }
+  navigator.clipboard.writeText(link).then(() => {
+    showToast('Đã sao chép link kết bạn Locket của bạn! 📋', 'success');
+  }).catch(() => {
+    showToast('Link mời của bạn: ' + link, 'info');
+  });
+}
+
+function copyMyInviteLinkFromModal() {
+  const link = window.currentMyInviteLink;
+  if (!link) {
+    showToast('Chưa có link mời của bạn.', 'error');
+    return;
+  }
+  navigator.clipboard.writeText(link).then(() => {
+    showToast('Đã sao chép link mời của bạn! Hãy gửi cho bạn bè để kết nối. 📋', 'success');
+  }).catch(() => {
+    showToast('Link mời của bạn: ' + link, 'info');
+  });
+}
+
+async function checkFriendshipStatus() {
+  showToast('Đang kiểm tra lại danh sách bạn bè...', 'info');
+  await loadFriends();
+  closeFriendInviteModal();
 }
 
 function switchFriendSubtab(tab) {
