@@ -27,11 +27,162 @@ router.get('/presets', (req, res) => {
   }
 });
 
+function parseFirestoreValue(v) {
+  if (!v) return null;
+  if (v.stringValue !== undefined) return v.stringValue;
+  if (v.integerValue !== undefined) return parseInt(v.integerValue, 10);
+  if (v.doubleValue !== undefined) return parseFloat(v.doubleValue);
+  if (v.booleanValue !== undefined) return v.booleanValue;
+  if (v.timestampValue !== undefined) return v.timestampValue;
+  if (v.nullValue !== undefined) return null;
+  if (v.arrayValue) {
+    return (v.arrayValue.values || []).map(parseFirestoreValue);
+  }
+  if (v.mapValue) {
+    const res = {};
+    for (const [k, val] of Object.entries(v.mapValue.fields || {})) {
+      res[k] = parseFirestoreValue(val);
+    }
+    return res;
+  }
+  return null;
+}
+
+async function fetchFeedMoments(client, options = {}) {
+  const { filteredByUserId = null, limit = 50 } = options;
+  const uid = client.session.uid;
+  const idToken = await client.session.getValidToken();
+
+  // 1. Lấy danh sách bạn bè để map thông tin (tên, avatar, username)
+  let friends = [];
+  try {
+    friends = await client.friends.getAllFriends();
+  } catch (e) {
+    console.warn('Không thể tải friends để enrich feed:', e.message);
+  }
+
+  const friendsMap = new Map();
+  friends.forEach(f => {
+    const fullName = `${f.first_name || ''} ${f.last_name || ''}`.trim() || f.username || 'Bạn bè Locket';
+    friendsMap.set(f.uid, {
+      first_name: f.first_name || '',
+      last_name: f.last_name || '',
+      name: fullName,
+      username: f.username || '',
+      profile_picture_url: f.profile_picture_url || ''
+    });
+  });
+
+  // 2. Query Firestore history entries của user
+  const url = `https://firestore.googleapis.com/v1/projects/locket-4252a/databases/locket/documents/history/${uid}:runQuery`;
+  const structuredQuery = {
+    from: [{ collectionId: 'entries' }],
+    orderBy: [
+      { field: { fieldPath: 'date' }, direction: 'DESCENDING' },
+      { field: { fieldPath: '__name__' }, direction: 'DESCENDING' }
+    ],
+    limit: Math.min(Math.max(limit, 1), 100)
+  };
+
+  if (filteredByUserId) {
+    structuredQuery.where = {
+      fieldFilter: {
+        field: { fieldPath: 'user' },
+        op: 'EQUAL',
+        value: { stringValue: filteredByUserId }
+      }
+    };
+  }
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      ...client.device.defaultHeaders,
+      Authorization: `Bearer ${idToken}`,
+      'Content-Type': 'application/json',
+      Accept: 'application/json'
+    },
+    body: JSON.stringify({ structuredQuery })
+  });
+
+  if (!response.ok) {
+    console.error('Firestore runQuery error:', response.status);
+    return await client.moments.getLatest();
+  }
+
+  const rows = await response.json();
+  const documents = (rows || []).flatMap(r => r.document ? [r.document] : []);
+
+  return documents.map(doc => {
+    const fields = doc.fields || {};
+    const momentUid = fields.canonical_uid?.stringValue || fields.moment_uid?.stringValue || doc.name?.split('/').pop();
+    const authorUid = fields.user?.stringValue || uid;
+    const thumbnail = fields.thumbnail_url?.stringValue || '';
+    const image = fields.image_url?.stringValue || thumbnail;
+    const video = fields.video_url?.stringValue || '';
+    const caption = fields.caption?.stringValue || '';
+    const date = fields.date?.timestampValue || null;
+    const overlays = parseFirestoreValue(fields.overlays) || [];
+    const suggestedReactions = parseFirestoreValue(fields.suggested_reactions) || [];
+
+    const isMe = authorUid === uid;
+    const friendInfo = friendsMap.get(authorUid) || (isMe ? {
+      name: 'Tôi (Chính bạn)',
+      first_name: 'Tôi',
+      last_name: '',
+      username: 'me',
+      profile_picture_url: client.session.profile_picture_url || ''
+    } : {
+      name: 'Bạn bè Locket',
+      first_name: 'Bạn bè',
+      last_name: 'Locket',
+      username: '',
+      profile_picture_url: ''
+    });
+
+    let pillInfo = null;
+    if (overlays && overlays.length) {
+      const first = overlays[0];
+      const data = first.data || {};
+      pillInfo = {
+        text: data.text || caption || '',
+        icon: data.icon || first.icon || '',
+        text_color: data.text_color || '#FFFFFF',
+        colors: (data.background && data.background.colors && data.background.colors.length) ? data.background.colors : null
+      };
+    }
+
+    return {
+      id: momentUid,
+      uid: momentUid,
+      moment_uid: momentUid,
+      canonical_uid: momentUid,
+      user: authorUid,
+      user_uid: authorUid,
+      is_me: isMe,
+      author_name: friendInfo.name,
+      first_name: friendInfo.first_name,
+      last_name: friendInfo.last_name,
+      username: friendInfo.username,
+      profile_picture_url: friendInfo.profile_picture_url,
+      thumbnail_url: thumbnail,
+      image_url: image,
+      video_url: video,
+      caption: caption,
+      date: date,
+      overlays: overlays,
+      pill_info: pillInfo,
+      suggested_reactions: suggestedReactions
+    };
+  });
+}
+
 // 2. Lấy Feed mới nhất từ Bạn bè
 router.get('/feed', requireAuth, async (req, res) => {
   try {
     const { client } = await locketManager.getActiveClientForUser(req.user.id);
-    const moments = await client.moments.getLatest();
+    const limit = parseInt(req.query.limit, 10) || 50;
+    const moments = await fetchFeedMoments(client, { limit });
 
     res.json({
       code: 200,
@@ -48,7 +199,7 @@ router.get('/feed', requireAuth, async (req, res) => {
 router.get('/my', requireAuth, async (req, res) => {
   try {
     const { client } = await locketManager.getActiveClientForUser(req.user.id);
-    const moments = await client.moments.getAllMyMoments();
+    const moments = await fetchFeedMoments(client, { filteredByUserId: client.session.uid, limit: 50 });
 
     res.json({
       code: 200,
@@ -78,14 +229,14 @@ router.get('/rollcall', requireAuth, async (req, res) => {
   }
 });
 
-// 5. Lấy khoảnh khắc của một người bạn
+// 5. Lấy khoảnh khắc của một người bạn cụ thể
 router.get('/user/:userUid', requireAuth, async (req, res) => {
   try {
     const { client } = await locketManager.getActiveClientForUser(req.user.id);
     const { userUid } = req.params;
-    const limit = parseInt(req.query.limit, 10) || 20;
+    const limit = parseInt(req.query.limit, 10) || 50;
 
-    const moments = await client.moments.getSharedMomentsByUser(userUid, limit);
+    const moments = await fetchFeedMoments(client, { filteredByUserId: userUid, limit });
     res.json({
       code: 200,
       success: true,

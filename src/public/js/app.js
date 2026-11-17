@@ -16,6 +16,7 @@ let activePeerDetails = null;
 let socket = null;
 let currentFacingMode = 'user';
 let cachedAudienceFriends = [];
+let selectedSpotifyTrack = null;
 
 const DEFAULT_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f59e0b' stroke-width='1.5'%3E%3Cpath d='M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2'%3E%3C/path%3E%3Ccircle cx='12' cy='7' r='4'%3E%3C/circle%3E%3C/svg%3E";
 
@@ -434,45 +435,73 @@ async function loadFeed() {
   lucide.createIcons();
 }
 
+function formatMomentTime(dateStr) {
+  if (!dateStr) return 'Vừa xong';
+  const d = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now - d;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  if (diffMins < 1) return 'Vừa xong';
+  if (diffMins < 60) return `${diffMins} phút trước`;
+  if (diffHours < 24 && d.getDate() === now.getDate()) {
+    return `${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} hôm nay`;
+  }
+  if (diffHours < 48) {
+    return `Hôm qua ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+  }
+  return `${d.getDate()}/${d.getMonth()+1} ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+}
+
 function renderMomentCard(moment) {
-  const authorName = moment.first_name ? `${moment.first_name} ${moment.last_name || ''}` : (moment.username || 'Bạn bè Locket');
-  const authorAvatar = moment.profile_picture_url || '/images/locket.webp';
-  const timeStr = moment.date ? new Date(moment.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Vừa xong';
+  const authorName = moment.author_name || (moment.first_name ? `${moment.first_name} ${moment.last_name || ''}`.trim() : (moment.username ? `@${moment.username}` : 'Bạn bè Locket'));
+  const authorAvatar = moment.profile_picture_url || DEFAULT_AVATAR;
+  const timeStr = formatMomentTime(moment.date);
   const isVideo = Boolean(moment.video_url);
 
-  // Caption Pill
+  // Caption Pill / Gradient Pill
   let pillHtml = '';
-  if (moment.caption || moment.overlay_info) {
-    const text = moment.caption || '';
-    const icon = moment.icon || '';
+  const pill = moment.pill_info;
+  const text = pill?.text || moment.caption || '';
+  const icon = pill?.icon || '';
+  if (text) {
+    let bgStyle = 'background: rgba(0,0,0,0.85);';
+    if (pill?.colors && pill.colors.length >= 2) {
+      bgStyle = `background: linear-gradient(135deg, ${pill.colors.join(', ')});`;
+    } else if (pill?.colors && pill.colors.length === 1) {
+      bgStyle = `background: ${pill.colors[0]};`;
+    }
+    const colorStyle = pill?.text_color ? `color: ${pill.text_color};` : 'color: #FFFFFF;';
+
     pillHtml = `
-      <div class="absolute bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-xs font-bold text-white shadow-xl flex items-center gap-1.5 whitespace-nowrap bg-black/80 backdrop-blur-md border border-white/10">
-        ${icon ? `<span>${icon}</span>` : ''}
-        <span>${text}</span>
+      <div class="absolute bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-xs font-bold shadow-xl flex items-center gap-1.5 whitespace-nowrap backdrop-blur-md border border-white/20 max-w-[85%] truncate"
+           style="${bgStyle} ${colorStyle}">
+        ${icon ? `<span>${escapeHtml(icon)}</span>` : ''}
+        <span class="truncate">${escapeHtml(text)}</span>
       </div>
     `;
   }
 
+  const momentId = moment.id || moment.canonical_uid || moment.moment_uid || moment.uid;
+
   return `
-    <div class="glass-panel rounded-3xl overflow-hidden border border-white/[0.08] hover:border-amber-500/30 transition flex flex-col">
+    <div class="glass-panel rounded-3xl overflow-hidden border border-white/[0.08] hover:border-amber-500/30 transition flex flex-col shadow-lg">
       <!-- Card Header -->
       <div class="p-3.5 flex items-center justify-between border-b border-white/[0.06]">
-        <div class="flex items-center gap-2.5">
-          <img src="${authorAvatar}" class="w-8 h-8 rounded-full object-cover border border-amber-500/30">
-          <div>
-            <h4 class="text-xs font-bold text-white leading-tight">${authorName}</h4>
+        <div class="flex items-center gap-2.5 min-w-0">
+          <img src="${authorAvatar}" class="w-8 h-8 rounded-full object-cover border border-amber-500/40 flex-shrink-0" onerror="this.src=DEFAULT_AVATAR">
+          <div class="min-w-0">
+            <h4 class="text-xs font-bold text-white leading-tight truncate">${escapeHtml(authorName)}</h4>
             <p class="text-[10px] text-gray-400 font-mono leading-tight">${timeStr}</p>
           </div>
         </div>
-        <button class="text-gray-400 hover:text-white">
-          <i data-lucide="maximize-2" class="w-3.5 h-3.5"></i>
-        </button>
+        ${moment.is_me ? `<span class="text-[9px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-semibold border border-amber-500/30 flex-shrink-0">Của bạn</span>` : ''}
       </div>
 
       <!-- Media Viewport 1:1 -->
-      <div class="relative aspect-square w-full bg-black overflow-hidden flex items-center justify-center">
+      <div class="relative aspect-square w-full bg-black overflow-hidden flex items-center justify-center group">
         ${isVideo ? `
-          <video src="${moment.video_url}" poster="${moment.thumbnail_url || ''}" controls playsinline class="w-full h-full object-cover"></video>
+          <video src="${moment.video_url}" poster="${moment.thumbnail_url || moment.image_url || ''}" controls playsinline class="w-full h-full object-cover"></video>
         ` : `
           <img src="${moment.thumbnail_url || moment.image_url}" alt="Moment" class="w-full h-full object-cover">
         `}
@@ -481,11 +510,11 @@ function renderMomentCard(moment) {
 
       <!-- Card Actions -->
       <div class="p-3 flex items-center justify-between text-xs text-gray-400 border-b border-white/[0.04]">
-        <button onclick="viewMomentViews('${moment.id || moment.uid}')" class="hover:text-amber-300 flex items-center gap-1.5">
+        <button onclick="viewMomentViews('${momentId}')" class="hover:text-amber-300 flex items-center gap-1.5 transition">
           <i data-lucide="eye" class="w-3.5 h-3.5"></i>
           <span>Lượt xem</span>
         </button>
-        <button onclick="openChatWithAuthor('${moment.user || moment.user_uid}', '${authorName}', '${authorAvatar}')" class="hover:text-amber-300 flex items-center gap-1.5">
+        <button onclick="openChatWithAuthor('${moment.user || moment.user_uid}', '${escapeHtml(authorName)}', '${authorAvatar}')" class="hover:text-amber-300 flex items-center gap-1.5 transition">
           <i data-lucide="message-circle" class="w-3.5 h-3.5"></i>
           <span>Nhắn tin</span>
         </button>
@@ -493,13 +522,13 @@ function renderMomentCard(moment) {
 
       <!-- Reaction Emojis Bar -->
       <div class="p-2.5 bg-obsidian-850/80 flex items-center justify-around text-base">
-        <button onclick="sendMomentReaction('${moment.id || moment.uid}', '❤️')" class="hover:scale-125 transition">❤️</button>
-        <button onclick="sendMomentReaction('${moment.id || moment.uid}', '🔥')" class="hover:scale-125 transition">🔥</button>
-        <button onclick="sendMomentReaction('${moment.id || moment.uid}', '😍')" class="hover:scale-125 transition">😍</button>
-        <button onclick="sendMomentReaction('${moment.id || moment.uid}', '🥰')" class="hover:scale-125 transition">🥰</button>
-        <button onclick="sendMomentReaction('${moment.id || moment.uid}', '😂')" class="hover:scale-125 transition">😂</button>
-        <button onclick="sendMomentReaction('${moment.id || moment.uid}', '💛')" class="hover:scale-125 transition">💛</button>
-        <button onclick="sendMomentReaction('${moment.id || moment.uid}', '🫶')" class="hover:scale-125 transition">🫶</button>
+        <button onclick="sendMomentReaction('${momentId}', '❤️')" class="hover:scale-125 transition">❤️</button>
+        <button onclick="sendMomentReaction('${momentId}', '🔥')" class="hover:scale-125 transition">🔥</button>
+        <button onclick="sendMomentReaction('${momentId}', '😍')" class="hover:scale-125 transition">😍</button>
+        <button onclick="sendMomentReaction('${momentId}', '🥰')" class="hover:scale-125 transition">🥰</button>
+        <button onclick="sendMomentReaction('${momentId}', '😂')" class="hover:scale-125 transition">😂</button>
+        <button onclick="sendMomentReaction('${momentId}', '💛')" class="hover:scale-125 transition">💛</button>
+        <button onclick="sendMomentReaction('${momentId}', '🫶')" class="hover:scale-125 transition">🫶</button>
       </div>
     </div>
   `;
@@ -741,6 +770,10 @@ function selectPreset(key) {
   } else if (key.startsWith('location_')) {
     if (captionInput && p.text) {
       captionInput.value = p.text;
+    }
+  } else if (key === 'spotify_music' || key === 'spotify_vibes' || key === 'spotify_chill' || key === 'spotify_acoustic') {
+    if (!selectedSpotifyTrack) {
+      openSpotifyModal();
     }
   } else {
     if (captionInput && !captionInput.value) {
@@ -1053,6 +1086,10 @@ async function submitMomentPost() {
       }
     }
 
+    if (selectedSpotifyTrack) {
+      formData.append('spotifyTrack', JSON.stringify(selectedSpotifyTrack));
+    }
+
     const token = localStorage.getItem('locket_jwt_token');
     const response = await fetch('/api/locket/moments/post', {
       method: 'POST',
@@ -1078,6 +1115,10 @@ async function submitMomentPost() {
       }
       const defaultOverlay = document.getElementById('live-preview-default-overlay');
       if (defaultOverlay) defaultOverlay.classList.remove('hidden');
+
+      if (typeof removeSpotifyTrack === 'function') {
+        removeSpotifyTrack();
+      }
 
       switchTab('feed');
     } else {
@@ -1414,5 +1455,217 @@ async function syncClientData() {
     showToast(res.msg, 'success');
   } else {
     showToast(res ? res.msg : 'Đồng bộ thất bại', 'error');
+  }
+}
+
+// ================= SPOTIFY MUSIC SEARCH & ATTACH =================
+function openSpotifyModal() {
+  const modal = document.getElementById('modal-spotify');
+  if (modal) {
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    const input = document.getElementById('spotify-search-input');
+    if (input) {
+      input.focus();
+      if (!input.value.trim()) {
+        input.value = 'Shape of You';
+        searchSpotifyTracks();
+      }
+    }
+    lucide.createIcons();
+  }
+}
+
+function closeSpotifyModal() {
+  const modal = document.getElementById('modal-spotify');
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  }
+  if (currentAudioPreview) {
+    currentAudioPreview.pause();
+    currentAudioPreview = null;
+  }
+}
+
+function quickSpotifySearch(query) {
+  const input = document.getElementById('spotify-search-input');
+  if (input) {
+    input.value = query;
+    searchSpotifyTracks();
+  }
+}
+
+async function searchSpotifyTracks() {
+  const input = document.getElementById('spotify-search-input');
+  const q = input ? input.value.trim() : '';
+  const listEl = document.getElementById('spotify-results-list');
+  if (!listEl) return;
+
+  if (!q) {
+    listEl.innerHTML = `<div class="py-8 text-center text-gray-500 text-xs">Vui lòng nhập tên bài hát hoặc ca sĩ...</div>`;
+    return;
+  }
+
+  listEl.innerHTML = `
+    <div class="py-8 text-center text-gray-400 text-xs flex items-center justify-center gap-2">
+      <div class="w-4 h-4 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin"></div>
+      <span>Đang tìm kiếm bài hát trên Spotify...</span>
+    </div>
+  `;
+
+  try {
+    const res = await apiFetch(`/api/spotify/search?q=${encodeURIComponent(q)}&limit=10`);
+    if (!res || !res.success || !res.data || !res.data.length) {
+      listEl.innerHTML = `<div class="py-8 text-center text-gray-500 text-xs">Không tìm thấy bài hát nào cho "${escapeHtml(q)}".</div>`;
+      return;
+    }
+
+    listEl.innerHTML = res.data.map(track => {
+      const trackJson = JSON.stringify(track).replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+      return `
+        <div class="p-2.5 rounded-2xl hover:bg-white/[0.04] transition flex items-center justify-between gap-3">
+          <div class="flex items-center gap-3 min-w-0">
+            <img src="${track.thumbnail || track.image || '/images/locket.webp'}" class="w-12 h-12 rounded-xl object-cover border border-white/10 flex-shrink-0">
+            <div class="min-w-0">
+              <h5 class="text-xs font-bold text-white truncate">${escapeHtml(track.name)}</h5>
+              <p class="text-[11px] text-gray-400 truncate">${escapeHtml(track.artists)}</p>
+              <p class="text-[9px] text-gray-500 truncate">${escapeHtml(track.album)}</p>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2 flex-shrink-0">
+            ${track.preview_url ? `
+              <button type="button" onclick="playAudioPreview('${track.preview_url}')" class="p-2 rounded-xl bg-obsidian-850 text-gray-400 hover:text-emerald-400 border border-white/10 transition" title="Nghe thử 30s">
+                <i data-lucide="play" class="w-3.5 h-3.5"></i>
+              </button>
+            ` : ''}
+            <button type="button" onclick='selectSpotifyTrack(${trackJson})' 
+                    class="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold transition flex items-center gap-1 shadow-md">
+              <span>Gắn bài này</span>
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+    lucide.createIcons();
+  } catch (err) {
+    listEl.innerHTML = `<div class="py-8 text-center text-rose-400 text-xs">Lỗi khi tìm kiếm: ${err.message}</div>`;
+  }
+}
+
+let currentAudioPreview = null;
+function playAudioPreview(url) {
+  if (currentAudioPreview) {
+    currentAudioPreview.pause();
+    currentAudioPreview = null;
+  }
+  if (url) {
+    currentAudioPreview = new Audio(url);
+    currentAudioPreview.play().catch(e => console.warn('Audio play blocked:', e));
+  }
+}
+
+function selectSpotifyTrack(track) {
+  selectedSpotifyTrack = track;
+
+  // Cập nhật banner Spotify
+  const box = document.getElementById('spotify-attached-box');
+  const thumb = document.getElementById('spotify-track-thumb');
+  const nameEl = document.getElementById('spotify-track-name');
+  const artistEl = document.getElementById('spotify-track-artist');
+  const linkEl = document.getElementById('spotify-track-link');
+  const btnLabel = document.getElementById('spotify-btn-label');
+
+  if (box) box.classList.remove('hidden');
+  if (thumb) thumb.src = track.thumbnail || track.image || '/images/locket.webp';
+  if (nameEl) nameEl.textContent = track.name;
+  if (artistEl) artistEl.textContent = track.artists;
+  if (linkEl) linkEl.href = track.url || '#';
+  if (btnLabel) btnLabel.textContent = `Đổi: ${track.name.substring(0, 15)}...`;
+
+  // Gán caption
+  const captionInput = document.getElementById('post-caption-input');
+  if (captionInput) {
+    captionInput.value = `🎵 ${track.name} - ${track.artists}`;
+  }
+
+  // Tự động chuyển preset sang spotify_music
+  selectedPresetKey = 'spotify_music';
+  if (allPresets['spotify_music']) {
+    allPresets['spotify_music'].text = `${track.name} - ${track.artists}`;
+  }
+  renderPresets();
+  updateLivePreview();
+
+  closeSpotifyModal();
+  showToast(`Đã gắn nhạc Spotify: ${track.name} 🎵`, 'success');
+}
+
+function removeSpotifyTrack() {
+  selectedSpotifyTrack = null;
+  const box = document.getElementById('spotify-attached-box');
+  const btnLabel = document.getElementById('spotify-btn-label');
+  if (box) box.classList.add('hidden');
+  if (btnLabel) btnLabel.textContent = 'Gắn nhạc Spotify';
+
+  const captionInput = document.getElementById('post-caption-input');
+  if (captionInput && captionInput.value.startsWith('🎵')) {
+    captionInput.value = '';
+  }
+
+  selectedPresetKey = 'standard';
+  renderPresets();
+  updateLivePreview();
+  showToast('Đã gỡ bài hát Spotify', 'info');
+}
+
+// ================= VIEW FRIEND MOMENTS MODAL =================
+async function viewFriendMoments(friendUid) {
+  const modal = document.getElementById('modal-friend-moments');
+  const content = document.getElementById('friend-moments-content');
+  const title = document.getElementById('friend-moments-name');
+  const countEl = document.getElementById('friend-moments-count');
+  const avatar = document.getElementById('friend-moments-avatar');
+
+  if (modal) {
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+  }
+
+  content.innerHTML = `
+    <div class="col-span-full py-16 text-center text-gray-500 flex flex-col items-center justify-center gap-3">
+      <div class="w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+      <p class="text-xs">Đang tải toàn bộ khoảnh khắc của bạn bè...</p>
+    </div>
+  `;
+
+  const res = await apiFetch(`/api/locket/moments/user/${friendUid}`);
+  if (!res || !res.success || !res.data || !res.data.length) {
+    content.innerHTML = `
+      <div class="col-span-full py-16 text-center text-gray-500 space-y-2">
+        <i data-lucide="image-off" class="w-10 h-10 mx-auto text-gray-600"></i>
+        <p class="text-xs font-semibold">Người bạn này chưa chia sẻ khoảnh khắc nào với bạn.</p>
+      </div>
+    `;
+    lucide.createIcons();
+    return;
+  }
+
+  const moments = res.data;
+  const first = moments[0];
+  if (title) title.textContent = first.author_name || 'Khoảnh khắc bạn bè';
+  if (countEl) countEl.textContent = `${moments.length} khoảnh khắc đã chia sẻ`;
+  if (avatar) avatar.src = first.profile_picture_url || DEFAULT_AVATAR;
+
+  content.innerHTML = moments.map(m => renderMomentCard(m)).join('');
+  lucide.createIcons();
+}
+
+function closeFriendMomentsModal() {
+  const modal = document.getElementById('modal-friend-moments');
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
   }
 }

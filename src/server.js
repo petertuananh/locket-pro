@@ -13,6 +13,7 @@ const momentsRoutes = require('./routes/moments');
 const friendsRoutes = require('./routes/friends');
 const chatRoutes = require('./routes/chat');
 const userRoutes = require('./routes/user');
+const spotifyRoutes = require('./routes/spotify');
 
 const app = express();
 const server = http.createServer(app);
@@ -42,6 +43,7 @@ app.use('/api/locket/moments', momentsRoutes);
 app.use('/api/locket/friends', friendsRoutes);
 app.use('/api/locket/chat', chatRoutes);
 app.use('/api/locket/user', userRoutes);
+app.use('/api/spotify', spotifyRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

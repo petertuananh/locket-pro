@@ -12,6 +12,58 @@
     "max_lines": 1,
     "section": "🎨 General"
   },
+  "spotify_music": {
+    "overlay_id": "caption:spotify_music",
+    "type": "spotify",
+    "text": "Shape of You",
+    "icon": "🎵",
+    "colors": [
+      "#1DB954",
+      "#191414"
+    ],
+    "text_color": "#FFFFFF",
+    "max_lines": 1,
+    "section": "🎵 Âm nhạc & Spotify"
+  },
+  "spotify_vibes": {
+    "overlay_id": "caption:spotify_vibes",
+    "type": "spotify",
+    "text": "Đang nghe Spotify",
+    "icon": "🟢",
+    "colors": [
+      "#1ED760",
+      "#121212"
+    ],
+    "text_color": "#FFFFFF",
+    "max_lines": 1,
+    "section": "🎵 Âm nhạc & Spotify"
+  },
+  "spotify_chill": {
+    "overlay_id": "caption:spotify_chill",
+    "type": "spotify",
+    "text": "Giai điệu thư giãn",
+    "icon": "🎧",
+    "colors": [
+      "#10B981",
+      "#064E3B"
+    ],
+    "text_color": "#A7F3D0",
+    "max_lines": 1,
+    "section": "🎵 Âm nhạc & Spotify"
+  },
+  "spotify_acoustic": {
+    "overlay_id": "caption:spotify_acoustic",
+    "type": "spotify",
+    "text": "Acoustic Chill",
+    "icon": "🎸",
+    "colors": [
+      "#F59E0B",
+      "#78350F"
+    ],
+    "text_color": "#FEF3C7",
+    "max_lines": 1,
+    "section": "🎵 Âm nhạc & Spotify"
+  },
   "browser_time": {
     "overlay_id": "caption:browser_time",
     "type": "dynamic_time",

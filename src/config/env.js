@@ -11,5 +11,7 @@ module.exports = {
   GOOGLE_CALLBACK_URL: process.env.GOOGLE_CALLBACK_URL || 'https://locket.tuananh.dev/api/auth/google/callback',
   CLIENT_URL: process.env.CLIENT_URL || 'https://locket.tuananh.dev',
   SESSION_DIR: process.env.SESSION_DIR || path.join(__dirname, '../locket_sessions'),
-  UPLOADS_DIR: path.join(__dirname, '../../uploads')
+  UPLOADS_DIR: path.join(__dirname, '../../uploads'),
+  SPOTIFY_CLIENT_ID: process.env.SPOTIFY_CLIENT_ID || '19799f80740044d2952a2369ab26b2a2',
+  SPOTIFY_CLIENT_SECRET: process.env.SPOTIFY_CLIENT_SECRET || '2e9e20a4011740c8a87ff4e66887a7b1'
 };
