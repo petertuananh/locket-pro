@@ -13,8 +13,8 @@
     "section": "🎨 General"
   },
   "spotify_music": {
-    "overlay_id": "caption:spotify_music",
-    "type": "spotify",
+    "overlay_id": "caption:standard",
+    "type": "standard",
     "text": "Shape of You",
     "icon": "🎵",
     "colors": [
@@ -26,8 +26,8 @@
     "section": "🎵 Âm nhạc & Spotify"
   },
   "spotify_vibes": {
-    "overlay_id": "caption:spotify_vibes",
-    "type": "spotify",
+    "overlay_id": "caption:standard",
+    "type": "standard",
     "text": "Đang nghe Spotify",
     "icon": "🟢",
     "colors": [
@@ -39,8 +39,8 @@
     "section": "🎵 Âm nhạc & Spotify"
   },
   "spotify_chill": {
-    "overlay_id": "caption:spotify_chill",
-    "type": "spotify",
+    "overlay_id": "caption:standard",
+    "type": "standard",
     "text": "Giai điệu thư giãn",
     "icon": "🎧",
     "colors": [
@@ -52,8 +52,8 @@
     "section": "🎵 Âm nhạc & Spotify"
   },
   "spotify_acoustic": {
-    "overlay_id": "caption:spotify_acoustic",
-    "type": "spotify",
+    "overlay_id": "caption:standard",
+    "type": "standard",
     "text": "Acoustic Chill",
     "icon": "🎸",
     "colors": [
@@ -65,8 +65,8 @@
     "section": "🎵 Âm nhạc & Spotify"
   },
   "browser_time": {
-    "overlay_id": "caption:browser_time",
-    "type": "dynamic_time",
+    "overlay_id": "caption:standard",
+    "type": "standard",
     "text": "Giờ hiện tại",
     "icon": "⏰",
     "colors": [
@@ -78,8 +78,8 @@
     "section": "⏰ Giờ & Vị trí"
   },
   "browser_time_sunset": {
-    "overlay_id": "caption:browser_time_sunset",
-    "type": "dynamic_time",
+    "overlay_id": "caption:standard",
+    "type": "standard",
     "text": "Hoàng hôn",
     "icon": "🌆",
     "colors": [
@@ -91,8 +91,8 @@
     "section": "⏰ Giờ & Vị trí"
   },
   "browser_time_night": {
-    "overlay_id": "caption:browser_time_night",
-    "type": "dynamic_time",
+    "overlay_id": "caption:standard",
+    "type": "standard",
     "text": "Đêm muộn",
     "icon": "🌙",
     "colors": [
@@ -104,8 +104,8 @@
     "section": "⏰ Giờ & Vị trí"
   },
   "browser_location_gps": {
-    "overlay_id": "caption:browser_location_gps",
-    "type": "dynamic_location",
+    "overlay_id": "caption:standard",
+    "type": "standard",
     "text": "Vị trí GPS",
     "icon": "📍",
     "colors": [
@@ -117,8 +117,8 @@
     "section": "⏰ Giờ & Vị trí"
   },
   "location_hanoi": {
-    "overlay_id": "caption:location_hanoi",
-    "type": "static_content",
+    "overlay_id": "caption:standard",
+    "type": "standard",
     "text": "Hà Nội",
     "icon": "📍",
     "colors": [
@@ -130,8 +130,8 @@
     "section": "⏰ Giờ & Vị trí"
   },
   "location_saigon": {
-    "overlay_id": "caption:location_saigon",
-    "type": "static_content",
+    "overlay_id": "caption:standard",
+    "type": "standard",
     "text": "TP. Hồ Chí Minh",
     "icon": "📍",
     "colors": [
@@ -143,8 +143,8 @@
     "section": "⏰ Giờ & Vị trí"
   },
   "location_danang": {
-    "overlay_id": "caption:location_danang",
-    "type": "static_content",
+    "overlay_id": "caption:standard",
+    "type": "standard",
     "text": "Đà Nẵng",
     "icon": "🌊",
     "colors": [
@@ -156,8 +156,8 @@
     "section": "⏰ Giờ & Vị trí"
   },
   "location_dongnai": {
-    "overlay_id": "caption:location_dongnai",
-    "type": "static_content",
+    "overlay_id": "caption:standard",
+    "type": "standard",
     "text": "Biên Hòa, Đồng Nai",
     "icon": "📍",
     "colors": [
@@ -169,8 +169,8 @@
     "section": "⏰ Giờ & Vị trí"
   },
   "location_dalat": {
-    "overlay_id": "caption:location_dalat",
-    "type": "static_content",
+    "overlay_id": "caption:standard",
+    "type": "standard",
     "text": "Đà Lạt mù sương",
     "icon": "🌲",
     "colors": [
@@ -2029,8 +2029,8 @@
     "section": "🌸 Đời sống"
   },
   "tinh_hoa_hoi_tu": {
-    "overlay_id": "caption:tinh_hoa_hoi_tu",
-    "type": "static_content",
+    "overlay_id": "caption:standard",
+    "type": "standard",
     "text": "Tinh hoa hội tụ",
     "icon": "✨",
     "colors": [
@@ -2042,8 +2042,8 @@
     "section": "🌸 Gen Z Slay"
   },
   "phu_tinh_khong_phu_ban": {
-    "overlay_id": "caption:phu_tinh_khong_phu_ban",
-    "type": "static_content",
+    "overlay_id": "caption:standard",
+    "type": "standard",
     "text": "Phụ tình không phụ bản",
     "icon": "🕶️",
     "colors": [
@@ -2055,8 +2055,8 @@
     "section": "🌸 Gen Z Slay"
   },
   "ngoan_xinh_yeu": {
-    "overlay_id": "caption:ngoan_xinh_yeu",
-    "type": "static_content",
+    "overlay_id": "caption:standard",
+    "type": "standard",
     "text": "Ngoan xinh yêu của ai?",
     "icon": "🌸",
     "colors": [
@@ -2068,8 +2068,8 @@
     "section": "🌸 Gen Z Slay"
   },
   "nhin_la_biet_uy_tin": {
-    "overlay_id": "caption:nhin_la_biet_uy_tin",
-    "type": "static_content",
+    "overlay_id": "caption:standard",
+    "type": "standard",
     "text": "Nhìn là biết uy tín",
     "icon": "👌",
     "colors": [
@@ -2081,8 +2081,8 @@
     "section": "🌸 Gen Z Slay"
   },
   "luon_vui_tuoi": {
-    "overlay_id": "caption:luon_vui_tuoi",
-    "type": "static_content",
+    "overlay_id": "caption:standard",
+    "type": "standard",
     "text": "Luôn vui tươi",
     "icon": "🤡",
     "colors": [
@@ -2094,8 +2094,8 @@
     "section": "🌸 Bất ổn & Khó đỡ"
   },
   "bat_on_that_su": {
-    "overlay_id": "caption:bat_on_that_su",
-    "type": "static_content",
+    "overlay_id": "caption:standard",
+    "type": "standard",
     "text": "Bất ổn thật sự",
     "icon": "🫠",
     "colors": [
@@ -2107,8 +2107,8 @@
     "section": "🌸 Bất ổn & Khó đỡ"
   },
   "khong_cam_xuc": {
-    "overlay_id": "caption:khong_cam_xuc",
-    "type": "static_content",
+    "overlay_id": "caption:standard",
+    "type": "standard",
     "text": "Không cảm xúc",
     "icon": "🗿",
     "colors": [
@@ -2120,8 +2120,8 @@
     "section": "🌸 Bất ổn & Khó đỡ"
   },
   "phu_huynh_dung_xem": {
-    "overlay_id": "caption:phu_huynh_dung_xem",
-    "type": "static_content",
+    "overlay_id": "caption:standard",
+    "type": "standard",
     "text": "Phụ huynh đừng xem",
     "icon": "🙈",
     "colors": [
@@ -2133,8 +2133,8 @@
     "section": "🌸 Bất ổn & Khó đỡ"
   },
   "check_var": {
-    "overlay_id": "caption:check_var",
-    "type": "static_content",
+    "overlay_id": "caption:standard",
+    "type": "standard",
     "text": "Check VAR liền",
     "icon": "📺",
     "colors": [
@@ -2146,8 +2146,8 @@
     "section": "🌸 Check VAR & Hóng hớt"
   },
   "qua_nhieu_su_de_thuong": {
-    "overlay_id": "caption:qua_nhieu_su_de_thuong",
-    "type": "static_content",
+    "overlay_id": "caption:standard",
+    "type": "standard",
     "text": "Quá nhiều sự dễ thương",
     "icon": "🎀",
     "colors": [
@@ -2159,8 +2159,8 @@
     "section": "🌸 Check VAR & Hóng hớt"
   },
   "mac_bay_tinh_yeu": {
-    "overlay_id": "caption:mac_bay_tinh_yeu",
-    "type": "static_content",
+    "overlay_id": "caption:standard",
+    "type": "standard",
     "text": "Mắc bẫy tình yêu",
     "icon": "💘",
     "colors": [
@@ -2172,8 +2172,8 @@
     "section": "🌸 Check VAR & Hóng hớt"
   },
   "song_gio_phu_doi_trai": {
-    "overlay_id": "caption:song_gio_phu_doi_trai",
-    "type": "static_content",
+    "overlay_id": "caption:standard",
+    "type": "standard",
     "text": "Sóng gió phủ đời trai",
     "icon": "🌪️",
     "colors": [
@@ -2185,8 +2185,8 @@
     "section": "🌸 Check VAR & Hóng hớt"
   },
   "deadline_ruot": {
-    "overlay_id": "caption:deadline_ruot",
-    "type": "static_content",
+    "overlay_id": "caption:standard",
+    "type": "standard",
     "text": "Deadline dí tụt quần",
     "icon": "🔥",
     "colors": [
@@ -2198,8 +2198,8 @@
     "section": "🌸 Góc Deadline & Đi Làm"
   },
   "tien_dau_ma_tieu": {
-    "overlay_id": "caption:tien_dau_ma_tieu",
-    "type": "static_content",
+    "overlay_id": "caption:standard",
+    "type": "standard",
     "text": "Tiền đâu mà tiêu",
     "icon": "💸",
     "colors": [
@@ -2211,8 +2211,8 @@
     "section": "🌸 Góc Deadline & Đi Làm"
   },
   "nghien_cuu_khoa_hoc": {
-    "overlay_id": "caption:nghien_cuu_khoa_hoc",
-    "type": "static_content",
+    "overlay_id": "caption:standard",
+    "type": "standard",
     "text": "Cần nạp cafein gấp",
     "icon": "☕",
     "colors": [

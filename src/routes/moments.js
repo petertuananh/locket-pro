@@ -144,13 +144,18 @@ async function fetchFeedMoments(client, options = {}) {
     if (overlays && overlays.length) {
       const first = overlays[0];
       const data = first.data || {};
+      const rawIcon = data.icon || first.icon || '';
+      const iconStr = (typeof rawIcon === 'object' && rawIcon !== null) ? (rawIcon.data || '') : (typeof rawIcon === 'string' ? rawIcon : '');
+      const pillText = data.text || first.alt_text || caption || '';
       pillInfo = {
-        text: data.text || caption || '',
-        icon: data.icon || first.icon || '',
+        text: pillText,
+        icon: iconStr,
         text_color: data.text_color || '#FFFFFF',
         colors: (data.background && data.background.colors && data.background.colors.length) ? data.background.colors : null
       };
     }
+
+    const finalCaption = caption || (pillInfo && pillInfo.text) || '';
 
     return {
       id: momentUid,
@@ -168,7 +173,7 @@ async function fetchFeedMoments(client, options = {}) {
       thumbnail_url: thumbnail,
       image_url: image,
       video_url: video,
-      caption: caption,
+      caption: finalCaption,
       date: date,
       overlays: overlays,
       pill_info: pillInfo,
@@ -198,8 +203,92 @@ router.get('/feed', requireAuth, async (req, res) => {
 // 3. Lấy toàn bộ Khoảnh khắc của tôi (My Moments)
 router.get('/my', requireAuth, async (req, res) => {
   try {
-    const { client } = await locketManager.getActiveClientForUser(req.user.id);
-    const moments = await fetchFeedMoments(client, { filteredByUserId: client.session.uid, limit: 50 });
+    const { client, account } = await locketManager.getActiveClientForUser(req.user.id);
+    let moments = await fetchFeedMoments(client, { filteredByUserId: client.session.uid, limit: 50 });
+
+    try {
+      const mySdkMoments = await client.moments.getAllMyMoments({ limit: 50 });
+      if (mySdkMoments && mySdkMoments.length) {
+        const existingIds = new Set(moments.map(m => m.id || m.uid || m.moment_uid));
+        for (const sm of mySdkMoments) {
+          const mid = sm.moment_uid || sm.id;
+          if (existingIds.has(mid)) continue;
+          existingIds.add(mid);
+          moments.push({
+            id: mid,
+            uid: mid,
+            moment_uid: mid,
+            canonical_uid: mid,
+            user: client.session.uid,
+            user_uid: client.session.uid,
+            is_me: true,
+            author_name: 'Tôi (Chính bạn)',
+            first_name: 'Tôi',
+            last_name: '',
+            username: account.username || 'me',
+            profile_picture_url: account.avatar_url || client.session.profile_picture_url || '',
+            thumbnail_url: sm.thumbnail_url || sm.image_url || '',
+            image_url: sm.image_url || sm.thumbnail_url || '',
+            video_url: sm.video_url || '',
+            caption: sm.caption || '',
+            date: sm.created_at || new Date().toISOString(),
+            overlays: sm.overlays || [],
+            pill_info: sm.pill_info || null,
+            views_count: sm.views_count || 0,
+            viewers: sm.viewers || []
+          });
+        }
+      }
+    } catch (sdkErr) {
+      console.warn('getAllMyMoments error:', sdkErr.message);
+    }
+
+    try {
+      const logs = await prisma.postedMomentLog.findMany({
+        where: { account_id: account.id },
+        orderBy: { created_at: 'desc' },
+        take: 50
+      });
+      const momentsMap = new Map();
+      moments.forEach(m => momentsMap.set(m.id || m.uid || m.moment_uid, m));
+
+      for (const log of logs) {
+        const existing = momentsMap.get(log.moment_uid);
+        if (existing) {
+          if (!existing.caption && log.caption) {
+            existing.caption = log.caption;
+          }
+        } else {
+          const newMoment = {
+            id: log.moment_uid,
+            uid: log.moment_uid,
+            moment_uid: log.moment_uid,
+            canonical_uid: log.moment_uid,
+            user: client.session.uid,
+            user_uid: client.session.uid,
+            is_me: true,
+            author_name: 'Tôi (Chính bạn)',
+            first_name: 'Tôi',
+            last_name: '',
+            username: account.username || 'me',
+            profile_picture_url: account.avatar_url || client.session.profile_picture_url || '',
+            thumbnail_url: log.thumbnail_url || log.media_url,
+            image_url: log.media_url,
+            video_url: log.media_type === 'video' ? log.media_url : '',
+            caption: log.caption || '',
+            date: log.created_at.toISOString(),
+            overlays: [],
+            pill_info: null
+          };
+          momentsMap.set(log.moment_uid, newMoment);
+          moments.push(newMoment);
+        }
+      }
+    } catch (dbErr) {
+      console.warn('postedMomentLog check error:', dbErr.message);
+    }
+
+    moments.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
 
     res.json({
       code: 200,
@@ -335,13 +424,45 @@ router.post('/post', requireAuth, upload.single('file'), async (req, res) => {
       });
     }
 
+    // Chuẩn bị caption, colors, icon, noteType
+    let finalCaption = (caption || '').trim();
+    const presetData = presetsService.getPresetByKey(noteType);
+    if (!finalCaption && presetData && presetData.text) {
+      finalCaption = presetData.text.trim();
+    }
+
+    let finalColors = parsedColors;
+    let finalIcon = icon;
+    let finalTextColor = textColor || '#FFFFFF';
+
+    if (presetData) {
+      if ((!finalColors || !finalColors.length) && presetData.colors && presetData.colors.length) {
+        finalColors = presetData.colors;
+      }
+      if (!finalIcon && presetData.icon) {
+        finalIcon = presetData.icon;
+      }
+      if (presetData.text_color) {
+        finalTextColor = presetData.text_color;
+      }
+    }
+
+    // Nếu caption đã có emoji icon ở đầu (ví dụ do Spotify gắn "🎵 Shape of You"), lược bớt emoji ở đầu text để tránh bị lặp icon 2 lần
+    if (finalIcon && finalCaption.startsWith(finalIcon)) {
+      finalCaption = finalCaption.slice(finalIcon.length).trim();
+    }
+
+    // Các kiểu overlay chuẩn được Locket API hỗ trợ chính thức
+    const officialSeasonalTypes = ['halloween_2026', 'christmas_eve_2026', 'christmas_day_2026', 'new_years_eve_2026', 'new_years_day_2027', 'new_years_day_2027_alternate', 'review', 'streak'];
+    const safeNoteType = officialSeasonalTypes.includes(noteType) ? noteType : 'standard';
+
     // Đăng bài qua locket.js
     const postOptions = {
-      caption: caption || '',
-      noteType: noteType || 'standard',
-      icon: icon || null,
-      colors: parsedColors,
-      textColor: textColor || '#FFFFFF',
+      caption: finalCaption,
+      noteType: safeNoteType,
+      icon: finalIcon || null,
+      colors: finalColors,
+      textColor: finalTextColor,
       isPrivate: isPrivate === true || isPrivate === 'true',
       recipients: parsedRecipients
     };
@@ -354,6 +475,9 @@ router.post('/post', requireAuth, upload.single('file'), async (req, res) => {
     }
 
     const result = await client.moments.post(postOptions);
+    if (result && !result.caption && finalCaption) {
+      result.caption = finalCaption;
+    }
 
     // Lưu log bài đăng
     try {
@@ -364,7 +488,7 @@ router.post('/post', requireAuth, upload.single('file'), async (req, res) => {
           media_type: isVideo ? 'video' : 'image',
           media_url: result.video_url || result.thumbnail_url || '',
           thumbnail_url: result.thumbnail_url || null,
-          caption: caption || null,
+          caption: finalCaption || null,
           is_private: isPrivate === true || isPrivate === 'true'
         }
       });

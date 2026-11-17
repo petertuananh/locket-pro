@@ -496,21 +496,37 @@ function renderMomentCard(moment) {
   // Caption Pill / Gradient Pill
   let pillHtml = '';
   const pill = moment.pill_info;
-  const text = pill?.text || moment.caption || '';
-  const icon = pill?.icon || '';
+  const overlayFirst = (moment.overlays && moment.overlays.length > 0) ? moment.overlays[0] : null;
+  const overlayData = overlayFirst?.data || {};
+
+  const text = pill?.text || overlayData?.text || overlayFirst?.alt_text || moment.caption || '';
+  
+  // Icon can be string or object { data: '🎵', type: 'emoji' }
+  const rawIcon = pill?.icon || overlayData?.icon || overlayFirst?.icon || '';
+  const icon = (typeof rawIcon === 'object' && rawIcon !== null) ? (rawIcon.data || '') : (typeof rawIcon === 'string' ? rawIcon : '');
+
+  // Colors can be in pill.colors or overlayData.background.colors
+  const colors = (pill?.colors && Array.isArray(pill.colors) && pill.colors.length)
+    ? pill.colors
+    : (overlayData?.background?.colors && Array.isArray(overlayData.background.colors) && overlayData.background.colors.length)
+      ? overlayData.background.colors
+      : null;
+
+  const textColor = pill?.text_color || overlayData?.text_color || '#FFFFFF';
+
   if (text) {
     let bgStyle = 'background: rgba(0,0,0,0.85);';
-    if (pill?.colors && pill.colors.length >= 2) {
-      bgStyle = `background: linear-gradient(135deg, ${pill.colors.join(', ')});`;
-    } else if (pill?.colors && pill.colors.length === 1) {
-      bgStyle = `background: ${pill.colors[0]};`;
+    if (colors && colors.length >= 2) {
+      bgStyle = `background: linear-gradient(135deg, ${colors.join(', ')});`;
+    } else if (colors && colors.length === 1) {
+      bgStyle = `background: ${colors[0]};`;
     }
-    const colorStyle = pill?.text_color ? `color: ${pill.text_color};` : 'color: #FFFFFF;';
+    const colorStyle = `color: ${textColor};`;
 
     pillHtml = `
-      <div class="absolute bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-xs font-bold shadow-xl flex items-center gap-1.5 whitespace-nowrap backdrop-blur-md border border-white/20 max-w-[85%] truncate"
+      <div class="absolute bottom-3 left-1/2 -translate-x-1/2 px-3.5 py-1.5 rounded-full text-xs font-bold shadow-xl flex items-center gap-1.5 whitespace-nowrap backdrop-blur-md border border-white/20 max-w-[88%] truncate pointer-events-none"
            style="${bgStyle} ${colorStyle}">
-        ${icon ? `<span>${escapeHtml(icon)}</span>` : ''}
+        ${icon ? `<span class="flex-shrink-0">${escapeHtml(icon)}</span>` : ''}
         <span class="truncate">${escapeHtml(text)}</span>
       </div>
     `;
@@ -1152,6 +1168,7 @@ async function submitMomentPost() {
       formData.append('recipients', JSON.stringify(selectedUids));
     }
 
+    let finalCaption = caption;
     if (isCustom) {
       formData.append('noteType', 'standard');
       formData.append('colors', JSON.stringify([
@@ -1166,10 +1183,11 @@ async function submitMomentPost() {
       if (p.colors && p.colors.length) formData.append('colors', JSON.stringify(p.colors));
       if (p.text_color) formData.append('textColor', p.text_color);
       if (p.icon) formData.append('icon', p.icon);
-      if (!caption && p.text) {
-        formData.set('caption', p.text);
+      if (!finalCaption && p.text) {
+        finalCaption = p.text;
       }
     }
+    formData.set('caption', finalCaption || '');
 
     if (selectedSpotifyTrack) {
       formData.append('spotifyTrack', JSON.stringify(selectedSpotifyTrack));
@@ -1848,7 +1866,7 @@ function selectSpotifyTrack(track) {
   // Gán caption
   const captionInput = document.getElementById('post-caption-input');
   if (captionInput) {
-    captionInput.value = `🎵 ${track.name} - ${track.artists}`;
+    captionInput.value = `${track.name} - ${track.artists}`;
   }
 
   // Tự động chuyển preset sang spotify_music

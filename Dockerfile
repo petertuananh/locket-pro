@@ -16,8 +16,8 @@ RUN npm install --production=false
 # Copy mã nguồn
 COPY . .
 
-# Đồng bộ caption presets cho locket.js SDK
-RUN cp src/data/caption_presets.json node_modules/locket.js/caption_presets.json
+# Đồng bộ caption presets cho locket.js SDK & Áp dụng patch
+RUN node scripts/patch-locket.js
 
 # Generate Prisma Client
 RUN npx prisma generate
