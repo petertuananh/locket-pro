@@ -13,12 +13,17 @@ let selectedFile = null;
 let webcamStream = null;
 let activePeerUid = null;
 let activePeerDetails = null;
+let allConversations = [];
+let chatPollInterval = null;
+let isSilentRefreshing = false;
+let activeTab = 'feed';
 let socket = null;
 let currentFacingMode = 'user';
 let cachedAudienceFriends = [];
 let selectedSpotifyTrack = null;
 
-const DEFAULT_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f59e0b' stroke-width='1.5'%3E%3Cpath d='M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2'%3E%3C/path%3E%3Ccircle cx='12' cy='7' r='4'%3E%3C/circle%3E%3C/svg%3E";
+// const DEFAULT_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f59e0b' stroke-width='1.5'%3E%3Cpath d='M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2'%3E%3C/path%3E%3Ccircle cx='12' cy='7' r='4'%3E%3C/circle%3E%3C/svg%3E";
+const DEFAULT_AVATAR = "/images/locket.webp";
 
 function escapeHtml(str) {
   if (!str) return '';
@@ -377,9 +382,16 @@ function switchTab(tabId) {
     activeSec.classList.remove('hidden');
   }
 
+  activeTab = tabId;
+
   // Khởi tạo tác vụ riêng cho tab
   if (tabId === 'friends') loadFriends();
-  if (tabId === 'chat') loadConversations();
+  if (tabId === 'chat') {
+    loadConversations();
+    startChatPolling();
+  } else {
+    stopChatPolling();
+  }
   if (tabId === 'feed') loadFeed();
 
   // Dừng webcam nếu rời khỏi tab post
@@ -1268,37 +1280,100 @@ async function acceptFriendRequest(userUid) {
 // ================= 7. TAB 4: TRÒ CHUYỆN LOCKET =================
 async function loadConversations() {
   const container = document.getElementById('conversations-list');
-  container.innerHTML = `<div class="py-8 text-center text-gray-500 text-xs">Đang tải hội thoại...</div>`;
+  container.innerHTML = `<div class="py-8 text-center text-gray-500 text-xs flex items-center justify-center gap-2"><div class="w-4 h-4 border-2 border-amber-400 border-t-transparent rounded-full animate-spin"></div><span>Đang tải hội thoại...</span></div>`;
 
   const res = await apiFetch('/api/locket/chat/conversations');
   if (!res || !res.success || !res.data || !res.data.length) {
+    allConversations = [];
     container.innerHTML = `<div class="py-8 text-center text-gray-500 text-xs">Chưa có cuộc trò chuyện nào.</div>`;
     return;
   }
 
-  container.innerHTML = res.data.map(c => `
-    <div onclick="selectConversation('${c.peer_uid}', '${escapeHtml(c.peer_name || 'Bạn bè')}', '${c.peer_avatar || ''}', '${c.peer_username || ''}', '${c.conversation_id || ''}')" 
-         class="p-3 hover:bg-white/[0.04] cursor-pointer flex items-center justify-between gap-3 transition">
-      <div class="flex items-center gap-2.5 truncate">
-        <img src="${c.peer_avatar || DEFAULT_AVATAR}" class="w-10 h-10 rounded-full object-cover border border-amber-500/20 shrink-0 bg-white/5">
-        <div class="truncate">
-          <h4 class="text-xs font-bold text-white truncate">${escapeHtml(c.peer_name || c.peer_username || 'Bạn bè')}</h4>
-          <p class="text-[11px] text-gray-400 truncate">${escapeHtml(c.last_message || 'Bắt đầu trò chuyện')}</p>
+  allConversations = res.data;
+  renderConversationsList(allConversations);
+
+  // Tự động chọn và nạp tin nhắn cho cuộc trò chuyện đầu tiên nếu chưa chọn ai, hoặc giữ peer hiện tại
+  const target = activePeerUid 
+    ? allConversations.find(c => c.peer_uid === activePeerUid) || allConversations[0]
+    : allConversations[0];
+
+  if (target) {
+    selectConversation(
+      target.peer_uid, 
+      target.peer_name, 
+      target.peer_avatar, 
+      target.peer_username, 
+      target.conversation_id
+    );
+  }
+}
+
+function renderConversationsList(list) {
+  const container = document.getElementById('conversations-list');
+  if (!container) return;
+  if (!list || !list.length) {
+    container.innerHTML = `<div class="py-8 text-center text-gray-500 text-xs">Không tìm thấy cuộc trò chuyện nào.</div>`;
+    return;
+  }
+
+  container.innerHTML = list.map(c => {
+    const isActive = activePeerUid === c.peer_uid;
+    const name = escapeHtml(c.peer_name || c.peer_username || 'Bạn bè');
+    const lastMsg = escapeHtml(c.last_message || 'Bắt đầu trò chuyện');
+    const activeClasses = isActive ? 'bg-amber-500/10 border-l-4 border-amber-400 pl-2' : '';
+    return `
+      <div id="convo-item-${c.peer_uid}" onclick="selectConversation('${c.peer_uid}', '${escapeHtml(c.peer_name || 'Bạn bè')}', '${c.peer_avatar || ''}', '${c.peer_username || ''}', '${c.conversation_id || ''}')" 
+           class="p-3 hover:bg-white/[0.04] cursor-pointer flex items-center justify-between gap-3 transition ${activeClasses}">
+        <div class="flex items-center gap-2.5 truncate">
+          <img src="${c.peer_avatar || DEFAULT_AVATAR}" class="w-10 h-10 rounded-full object-cover border border-amber-500/20 shrink-0 bg-white/5">
+          <div class="truncate">
+            <h4 class="text-xs font-bold text-white truncate">${name}</h4>
+            <p class="text-[11px] text-gray-400 truncate">${lastMsg}</p>
+          </div>
         </div>
+        ${c.unread_count ? `<span class="px-2 py-0.5 rounded-full bg-rose-500 text-white text-[10px] font-bold">${c.unread_count}</span>` : ''}
       </div>
-      ${c.unread_count ? `<span class="px-2 py-0.5 rounded-full bg-rose-500 text-white text-[10px] font-bold">${c.unread_count}</span>` : ''}
-    </div>
-  `).join('');
+    `;
+  }).join('');
+}
+
+function highlightActiveConversation(peerUid) {
+  document.querySelectorAll('#conversations-list > div').forEach(el => {
+    el.classList.remove('bg-amber-500/10', 'border-l-4', 'border-amber-400', 'pl-2');
+  });
+  const activeEl = document.getElementById(`convo-item-${peerUid}`);
+  if (activeEl) {
+    activeEl.classList.add('bg-amber-500/10', 'border-l-4', 'border-amber-400', 'pl-2');
+  }
+}
+
+function filterConversations() {
+  const query = (document.getElementById('chat-search').value || '').trim().toLowerCase();
+  if (!query) {
+    renderConversationsList(allConversations);
+    return;
+  }
+  const filtered = allConversations.filter(c => {
+    const name = (c.peer_name || '').toLowerCase();
+    const username = (c.peer_username || '').toLowerCase();
+    const lastMsg = (c.last_message || '').toLowerCase();
+    return name.includes(query) || username.includes(query) || lastMsg.includes(query);
+  });
+  renderConversationsList(filtered);
 }
 
 function openChatWithAuthor(peerUid, peerName, peerAvatar, peerUsername) {
   switchTab('chat');
-  selectConversation(peerUid, peerName, peerAvatar, peerUsername, null);
+  const existing = allConversations.find(c => c.peer_uid === peerUid);
+  const cid = existing ? existing.conversation_id : null;
+  selectConversation(peerUid, peerName, peerAvatar, peerUsername, cid);
 }
 
 async function selectConversation(peerUid, peerName, peerAvatar, peerUsername, conversationId = null) {
   activePeerUid = peerUid;
   activePeerDetails = { peerUid, peerName, peerAvatar, peerUsername, conversationId };
+
+  highlightActiveConversation(peerUid);
 
   document.getElementById('chat-peer-name').textContent = peerName || 'Bạn bè Locket';
   document.getElementById('chat-peer-username').textContent = peerUsername ? `@${peerUsername}` : '';
@@ -1312,15 +1387,38 @@ async function selectConversation(peerUid, peerName, peerAvatar, peerUsername, c
     ? `/api/locket/chat/messages/${peerUid}?conversationId=${encodeURIComponent(conversationId)}` 
     : `/api/locket/chat/messages/${peerUid}`;
 
-  const res = await apiFetch(url);
-  if (!res || !res.success || !res.data || !res.data.length) {
-    container.innerHTML = `<div class="m-auto text-center text-gray-500 text-xs">Chưa có tin nhắn nào trong cuộc trò chuyện này.<br><span class="text-amber-400 mt-1 inline-block">Hãy gửi tin nhắn đầu tiên!</span></div>`;
-    return;
-  }
+  try {
+    const res = await apiFetch(url);
+    if (!res || !res.success || !res.data || !res.data.length) {
+      container.innerHTML = `<div class="m-auto text-center text-gray-500 text-xs">Chưa có tin nhắn nào trong cuộc trò chuyện này.<br><span class="text-amber-400 mt-1 inline-block">Hãy gửi tin nhắn đầu tiên!</span></div>`;
+      return;
+    }
 
-  const messages = res.data;
-  container.innerHTML = messages.map(m => renderChatMessage(m)).join('');
-  container.scrollTop = container.scrollHeight;
+    const messages = res.data;
+    container.innerHTML = messages.map(m => renderChatMessage(m)).join('');
+    scrollChatToBottom();
+  } catch (err) {
+    console.error('Lỗi khi tải tin nhắn:', err);
+    container.innerHTML = `<div class="m-auto text-center text-rose-400 text-xs">Không thể tải tin nhắn. Hãy bấm nút làm mới để thử lại.</div>`;
+  }
+}
+
+function scrollChatToBottom(smooth = false) {
+  const container = document.getElementById('chat-messages-container');
+  if (!container) return;
+  const scrollAction = () => {
+    container.scrollTop = container.scrollHeight;
+    if (container.lastElementChild) {
+      container.lastElementChild.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'end' });
+    }
+  };
+  scrollAction();
+  requestAnimationFrame(() => {
+    scrollAction();
+    setTimeout(scrollAction, 50);
+    setTimeout(scrollAction, 150);
+    setTimeout(scrollAction, 300);
+  });
 }
 
 function renderChatMessage(msg) {
@@ -1328,12 +1426,18 @@ function renderChatMessage(msg) {
   const isMe = msg.is_me === true || (myLocketUid && msg.sender_uid === myLocketUid);
   const text = msg.msg || msg.text || '';
   const time = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+  const reaction = msg.reaction || (msg.reactions && msg.reactions.length ? msg.reactions[0].emoji : null);
 
   return `
     <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-full">
-      <div class="max-w-[75%] px-4 py-2.5 rounded-2xl text-xs ${isMe ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-black font-semibold rounded-br-none shadow-md' : 'bg-obsidian-800 text-gray-100 rounded-bl-none border border-white/10'}">
-        <p class="whitespace-pre-wrap break-words">${escapeHtml(text)}</p>
-        <span class="text-[9px] ${isMe ? 'text-black/60' : 'text-gray-500'} block text-right mt-1 font-mono">${time}</span>
+      <div class="relative max-w-[80%] sm:max-w-[70%] px-4 py-2.5 rounded-2xl text-xs ${isMe ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-black font-semibold rounded-br-sm shadow-md' : 'bg-obsidian-800 text-gray-100 rounded-bl-sm border border-white/10'}">
+        <p class="whitespace-pre-wrap break-words leading-relaxed">${escapeHtml(text)}</p>
+        <span class="text-[9px] ${isMe ? 'text-black/60' : 'text-gray-400'} block text-right mt-1 font-mono">${time}</span>
+        ${reaction ? `
+          <div class="absolute -bottom-2 ${isMe ? 'left-2' : 'right-2'} text-xs bg-obsidian-900 border border-white/20 rounded-full px-1.5 py-0.5 shadow flex items-center justify-center">
+            ${reaction}
+          </div>
+        ` : ''}
       </div>
     </div>
   `;
@@ -1341,8 +1445,12 @@ function renderChatMessage(msg) {
 
 function appendMessageBubble(msg) {
   const container = document.getElementById('chat-messages-container');
+  if (!container) return;
+  if (container.querySelector('.m-auto.text-center')) {
+    container.innerHTML = '';
+  }
   container.insertAdjacentHTML('beforeend', renderChatMessage(msg));
-  container.scrollTop = container.scrollHeight;
+  scrollChatToBottom(true);
 }
 
 async function sendChatMessage() {
@@ -1351,23 +1459,73 @@ async function sendChatMessage() {
   if (!text || !activePeerUid) return;
 
   input.value = '';
-  // Hiển thị trước tin nhắn của mình
+  // Hiển thị ngay tin nhắn gửi
   appendMessageBubble({ is_me: true, text, timestamp: new Date().toISOString() });
 
   const res = await apiFetch('/api/locket/chat/send', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ receiverUid: activePeerUid, text })
+    body: JSON.stringify({ 
+      receiverUid: activePeerUid, 
+      text,
+      conversationId: activePeerDetails ? activePeerDetails.conversationId : null
+    })
   });
 
   if (!res || !res.success) {
     showToast(res ? res.msg : 'Không thể gửi tin nhắn', 'error');
+  } else {
+    setTimeout(() => {
+      refreshCurrentChatSilent();
+    }, 800);
   }
 }
 
 function refreshCurrentChat() {
   if (activePeerUid && activePeerDetails) {
     selectConversation(activePeerUid, activePeerDetails.peerName, activePeerDetails.peerAvatar, activePeerDetails.peerUsername, activePeerDetails.conversationId);
+  }
+}
+
+async function refreshCurrentChatSilent() {
+  if (isSilentRefreshing || !activePeerUid || !activePeerDetails) return;
+  const container = document.getElementById('chat-messages-container');
+  if (!container) return;
+
+  const url = activePeerDetails.conversationId 
+    ? `/api/locket/chat/messages/${activePeerUid}?conversationId=${encodeURIComponent(activePeerDetails.conversationId)}` 
+    : `/api/locket/chat/messages/${activePeerUid}`;
+
+  isSilentRefreshing = true;
+  try {
+    const res = await apiFetch(url);
+    if (res && res.success && res.data) {
+      const messages = res.data;
+      const currentCount = container.querySelectorAll('.flex.flex-col').length;
+      if (messages.length !== currentCount) {
+        container.innerHTML = messages.map(m => renderChatMessage(m)).join('');
+        scrollChatToBottom();
+      }
+    }
+  } catch (_) {
+  } finally {
+    isSilentRefreshing = false;
+  }
+}
+
+function startChatPolling() {
+  stopChatPolling();
+  chatPollInterval = setInterval(() => {
+    if (activeTab === 'chat' && activePeerUid) {
+      refreshCurrentChatSilent();
+    }
+  }, 4000);
+}
+
+function stopChatPolling() {
+  if (chatPollInterval) {
+    clearInterval(chatPollInterval);
+    chatPollInterval = null;
   }
 }
 

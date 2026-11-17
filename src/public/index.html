@@ -489,36 +489,36 @@
     <!-- ================= TAB 4: TRÒ CHUYỆN LOCKET ================= -->
     <section id="section-chat" class="tab-section hidden">
       
-      <div class="glass-panel rounded-3xl overflow-hidden grid grid-cols-1 md:grid-cols-12 min-h-[640px] border border-white/[0.08]">
+      <div class="glass-panel rounded-3xl overflow-hidden flex flex-col md:grid md:grid-cols-12 h-[calc(100vh-140px)] min-h-[580px] max-h-[820px] border border-white/[0.08]">
         
         <!-- Left: Conversations List (4 cols) -->
-        <div class="md:col-span-4 border-r border-white/[0.08] flex flex-col bg-obsidian-850/60">
-          <div class="p-4 border-b border-white/[0.08] flex items-center justify-between">
+        <div class="h-64 md:h-full md:col-span-4 border-b md:border-b-0 md:border-r border-white/[0.08] flex flex-col overflow-hidden bg-obsidian-850/60 shrink-0">
+          <div class="p-4 border-b border-white/[0.08] flex items-center justify-between shrink-0">
             <h3 class="text-sm font-bold text-white flex items-center gap-2">
               <i data-lucide="message-square" class="w-4 h-4 text-amber-400"></i>
               <span>Tin nhắn Locket</span>
             </h3>
-            <button onclick="loadConversations()" class="text-gray-400 hover:text-white">
+            <button onclick="loadConversations()" class="text-gray-400 hover:text-white p-1 rounded-lg hover:bg-white/5 transition" title="Làm mới">
               <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
             </button>
           </div>
 
-          <div class="p-3 border-b border-white/[0.06]">
+          <div class="p-3 border-b border-white/[0.06] shrink-0">
             <input type="text" id="chat-search" oninput="filterConversations()" placeholder="Tìm kiếm bạn bè..." 
                    class="w-full glass-input rounded-xl px-3 py-1.5 text-xs placeholder-gray-500">
           </div>
 
           <!-- Conversations scroll list -->
-          <div id="conversations-list" class="flex-1 overflow-y-auto divide-y divide-white/[0.04]">
+          <div id="conversations-list" class="flex-1 overflow-y-auto min-h-0 divide-y divide-white/[0.04]">
             <!-- Injected dynamically -->
           </div>
         </div>
 
         <!-- Right: Active Chat Area (8 cols) -->
-        <div class="md:col-span-8 flex flex-col bg-obsidian-900/80">
+        <div class="flex-1 md:h-full md:col-span-8 flex flex-col overflow-hidden bg-obsidian-900/80 min-h-0">
           
           <!-- Peer Header -->
-          <div id="chat-peer-header" class="p-4 border-b border-white/[0.08] flex items-center justify-between">
+          <div id="chat-peer-header" class="p-4 border-b border-white/[0.08] flex items-center justify-between shrink-0">
             <div class="flex items-center gap-3">
               <img id="chat-peer-avatar" src="/images/locket.webp" alt="Peer" class="w-9 h-9 rounded-full object-cover border border-amber-500/30">
               <div>
@@ -526,13 +526,13 @@
                 <p id="chat-peer-username" class="text-xs text-gray-400">@username</p>
               </div>
             </div>
-            <button onclick="refreshCurrentChat()" class="text-gray-400 hover:text-white">
+            <button onclick="refreshCurrentChat()" class="text-gray-400 hover:text-white p-1.5 rounded-lg hover:bg-white/5 transition" title="Làm mới tin nhắn">
               <i data-lucide="refresh-cw" class="w-4 h-4"></i>
             </button>
           </div>
 
           <!-- Chat Messages Scroll Container -->
-          <div id="chat-messages-container" class="flex-1 p-4 overflow-y-auto space-y-3 flex flex-col">
+          <div id="chat-messages-container" class="flex-1 p-4 overflow-y-auto min-h-0 space-y-3 flex flex-col">
             <div class="m-auto text-center text-gray-500 text-xs">
               <i data-lucide="messages-square" class="w-10 h-10 mx-auto mb-2 text-gray-600"></i>
               <p>Chọn một người bạn ở danh sách bên trái để bắt đầu trò chuyện trực tiếp</p>
@@ -540,11 +540,11 @@
           </div>
 
           <!-- Message Input Bar -->
-          <div class="p-3 border-t border-white/[0.08] flex items-center gap-2 bg-obsidian-850/80">
+          <div class="p-3 border-t border-white/[0.08] flex items-center gap-2 bg-obsidian-850/80 shrink-0">
             <input type="text" id="chat-input" onkeypress="if(event.key === 'Enter') sendChatMessage()" placeholder="Nhập tin nhắn..." 
                    class="flex-1 glass-input rounded-2xl px-4 py-2.5 text-xs text-gray-200 placeholder-gray-500">
             
-            <button onclick="sendChatMessage()" class="w-10 h-10 rounded-full btn-locket flex items-center justify-center text-black shadow-lg">
+            <button onclick="sendChatMessage()" class="w-10 h-10 rounded-full btn-locket flex items-center justify-center text-black shadow-lg shrink-0">
               <i data-lucide="send" class="w-4 h-4"></i>
             </button>
           </div>
